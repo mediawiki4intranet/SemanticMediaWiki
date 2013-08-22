@@ -331,6 +331,18 @@ class SMWSQLStore3Writers {
 	}
 
 	/**
+	 * Like array_diff_assoc(), but doesn't cast array items to strings before comparison
+	 */
+	static function array_diff_assoc_nonstr( $array1, $array2 ) {
+		foreach ( $array2 as $k => $i ) {
+			if ( isset( $array1[$k] ) && $array2[$k] === $array1[$k] ) {
+				unset( $array1[$k] );
+			}
+		}
+		return $array1;
+	}
+
+	/**
 	 * Compute necessary insertions, deletions, and new table hashes for
 	 * updating the database to contain $newData for the subject with ID
 	 * $sid. Insertions and deletions are returned in as an array mapping
@@ -380,8 +392,8 @@ class SMWSQLStore3Writers {
 					continue;
 				} else { // Table contains no data or contains data that is different from the new
 					$oldTableData = $this->getCurrentPropertyTableContents( $sid, $propertyTable, $dbr );
-					$tablesInsertRows[$tableName] = array_diff_assoc( $newData[$tableName], $oldTableData );
-					$tablesDeleteRows[$tableName] = array_diff_assoc( $oldTableData, $newData[$tableName] );
+					$tablesInsertRows[$tableName] = self::array_diff_assoc_nonstr( $newData[$tableName], $oldTableData );
+					$tablesDeleteRows[$tableName] = self::array_diff_assoc_nonstr( $oldTableData, $newData[$tableName] );
 				}
 			} elseif ( array_key_exists( $tableName, $oldHashes ) ) {
 				// Table contains data but should not contain any after update
