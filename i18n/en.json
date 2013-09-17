@@ -115,6 +115,7 @@
 	"smw_noqueryfeature": "Some query feature was not supported in this wiki and part of the query was dropped ($1).",
 	"smw_noconjunctions": "Conjunctions in queries are not supported in this wiki and part of the query was dropped ($1).",
 	"smw_nodisjunctions": "Disjunctions in queries are not supported in this wiki and part of the query was dropped ($1).",
+	"smw_nonegations": "Negations in queries are not supported in this wiki and part of the query was dropped ($1).",
 	"smw_querytoolarge": "The following query conditions could not be considered due to the wikis restrictions in query size or depth: $1.",
 	"smw_notemplategiven": "Provide a value for the parameter \"template\" for this query format to work.",
 	"smw_db_sparqlqueryproblem": "The query result could not be obtained from the SPARQL database. This error might be temporary or indicate a bug in the database software.",

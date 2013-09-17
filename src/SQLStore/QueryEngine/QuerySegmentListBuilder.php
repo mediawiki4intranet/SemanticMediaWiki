@@ -8,6 +8,7 @@ use SMW\Query\Language\Description;
 use SMW\SQLStore\QueryEngine\Interpreter\ClassDescriptionInterpreter;
 use SMW\SQLStore\QueryEngine\Interpreter\ConceptDescriptionInterpreter;
 use SMW\SQLStore\QueryEngine\Interpreter\DisjunctionConjunctionInterpreter;
+use SMW\SQLStore\QueryEngine\Interpreter\NegationInterpreter;
 use SMW\SQLStore\QueryEngine\Interpreter\NamespaceDescriptionInterpreter;
 use SMW\SQLStore\QueryEngine\Interpreter\SomePropertyInterpreter;
 use SMW\SQLStore\QueryEngine\Interpreter\ThingDescriptionInterpreter;
@@ -77,6 +78,7 @@ class QuerySegmentListBuilder {
 
 		$this->dispatchingDescriptionInterpreter->addInterpreter( new SomePropertyInterpreter( $this ) );
 		$this->dispatchingDescriptionInterpreter->addInterpreter( new DisjunctionConjunctionInterpreter( $this ) );
+		$this->dispatchingDescriptionInterpreter->addInterpreter( new NegationInterpreter( $this ) );
 		$this->dispatchingDescriptionInterpreter->addInterpreter( new NamespaceDescriptionInterpreter( $this ) );
 		$this->dispatchingDescriptionInterpreter->addInterpreter( new ClassDescriptionInterpreter( $this ) );
 		$this->dispatchingDescriptionInterpreter->addInterpreter( new ValueDescriptionInterpreter( $this ) );
@@ -230,7 +232,8 @@ class QuerySegmentListBuilder {
 		$this->addQuerySegment( $query );
 
 		// Propagate sortkeys from subqueries:
-		if ( $query->type !== QuerySegment::Q_DISJUNCTION ) {
+		if ( $query->type !== QuerySegment::Q_DISJUNCTION &&
+			$query->type !== QuerySegment::Q_NEGATION ) {
 			// Sortkeys are killed by disjunctions (not all parts may have them),
 			// NOTE: preprocessing might try to push disjunctions downwards to safe sortkey, but this seems to be minor
 			foreach ( $query->components as $cid => $field ) {

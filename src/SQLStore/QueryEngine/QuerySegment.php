@@ -62,6 +62,12 @@ class QuerySegment {
 	const Q_PROP_HIERARCHY = 6;
 
 	/**
+	 * Type of query that is a negation of other query
+	 * (joinfield/jointable empty; only components relevant).
+	 */
+	const Q_NEGATION = 7;
+
+	/**
 	 * @var integer
 	 */
 	public $type = self::Q_TABLE;
@@ -75,6 +81,11 @@ class QuerySegment {
 	 * @var string|array
 	 */
 	public $joinfield = '';
+
+	/**
+	 * @var string
+	 */
+	public $jointype = '';
 
 	/**
 	 * @var string

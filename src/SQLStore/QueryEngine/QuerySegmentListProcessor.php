@@ -131,7 +131,8 @@ class QuerySegmentListProcessor {
 					$this->doResolveBySegment( $subQuery );
 
 					if ( $subQuery->joinTable !== '' ) { // Join with jointable.joinfield
-						$query->from .= ' INNER JOIN ' . $db->tableName( $subQuery->joinTable ) . " AS $subQuery->alias ON $joinField=" . $subQuery->joinfield;
+						$joinType = isset( $subQuery->jointype ) ? $subQuery->jointype : 'INNER';
+						$query->from .= " $joinType JOIN " . $db->tableName( $subQuery->joinTable ) . " AS $subQuery->alias ON $joinField=" . $subQuery->joinfield;
 					} elseif ( $subQuery->joinfield !== '' ) { // Require joinfield as "value" via WHERE.
 						$condition = '';
 
@@ -202,10 +203,22 @@ class QuerySegmentListProcessor {
 					$sql = '';
 
 					if ( $subQuery->joinTable !== '' ) {
-						$sql = 'INSERT ' . 'IGNORE ' . 'INTO ' .
-						       $db->tableName( $query->alias ) .
-							   " SELECT DISTINCT $subQuery->joinfield FROM " . $db->tableName( $subQuery->joinTable ) .
-							   " AS $subQuery->alias $subQuery->from" . ( $subQuery->where ? " WHERE $subQuery->where":'' );
+						if ( isset( $subQuery->jointype ) && $subQuery->type == QuerySegment::Q_NEGATION ) {
+							// SMWNegation
+							reset( $subQuery->components );
+							list( $key, $tmp ) = each( $subquery->components );
+							$sub = $this->querySegmentList[$key];
+							$sql = 'INSERT ' . 'IGNORE ' . 'INTO ' .
+								   $db->tableName( $query->alias ) .
+								   " SELECT DISTINCT $sub->joinfield FROM " . $db->tableName( $sub->joinTable ) .
+								   " AS $sub->alias $subQuery->jointype JOIN " . $db->tableName( $subQuery->joinTable ) .
+								   " AS $subQuery->alias ON " . $subQuery->joinfield . "=" . $sub->joinfield . ( $subQuery->where ? " WHERE $subQuery->where":'' );
+						} else {
+							$sql = 'INSERT ' . 'IGNORE ' . 'INTO ' .
+								   $db->tableName( $query->alias ) .
+								   " SELECT DISTINCT $subQuery->joinfield FROM " . $db->tableName( $subQuery->joinTable ) .
+								   " AS $subQuery->alias $subQuery->from" . ( $subQuery->where ? " WHERE $subQuery->where":'' );
+						}
 					} elseif ( $subQuery->joinfield !== '' ) {
 						// NOTE: this works only for single "unconditional" values without further
 						// WHERE or FROM. The execution must take care of not creating any others.
@@ -241,6 +254,57 @@ class QuerySegmentListProcessor {
 				$query->joinfield = "$query->alias.id";
 				$query->sortfields = array(); // Make sure we got no sortfields.
 				// TODO: currently this eliminates sortkeys, possibly keep them (needs different temp table format though, maybe not such a good thing to do)
+			break;
+			case QuerySegment::Q_NEGATION:
+				if ( $this->queryMode !== Query::MODE_NONE ) {
+					$db->query(
+						$this->getCreateTempIDTableSQL( $db->tableName( $query->alias ) ),
+						__METHOD__
+					);
+				}
+
+				// pick one subquery with jointable as anchor point ...
+				reset( $query->components );
+				list( $key, $tmp ) = each( $query->components );
+
+				$result = $this->querySegmentList[$key];
+				unset( $query->components[$key] );
+
+				// Execute it first (may change jointable and joinfield, e.g. when making temporary tables)
+				$this->doResolveBySegment( $result );
+
+				if ( $result->joinTable !== '' ) {
+					$sql = 'INSERT ' . 'IGNORE ' . 'INTO ' .
+						   $db->tableName( $query->alias ) .
+						   " SELECT $result->joinfield FROM " . $db->tableName( $result->joinTable ) .
+						   " AS $result->alias $result->from" . ( $result->where ? " WHERE $result->where":'' )
+					;
+				} elseif ( $result->joinfield !== '' ) {
+					// NOTE: this works only for single "unconditional" values without further
+					// WHERE or FROM. The execution must take care of not creating any others.
+					$values = '';
+
+					foreach ( $result->joinfield as $value ) {
+						$values .= ( $values ? ',' : '' ) . '(' . $db->addQuotes( $value ) . ')';
+					}
+
+					$sql = 'INSERT ' . 'IGNORE ' . 'INTO ' . $db->tableName( $query->alias ) . " (id) VALUES $values";
+				}
+				if ( $sql ) {
+					$this->executedQueries[$query->alias][] = $sql;
+
+					if ( $this->queryMode !== Query::MODE_NONE ) {
+						$db->query(
+							$sql,
+							__METHOD__
+						);
+					}
+				}
+				$query->jointype = 'LEFT';
+				$query->joinTable = $query->alias;
+				$query->joinfield = "$query->alias.id";
+				$query->where = "$query->alias.id IS NULL";
+				$query->sortfields = array(); // Make sure we got no sortfields.
 			break;
 			case QuerySegment::Q_PROP_HIERARCHY:
 			case QuerySegment::Q_CLASS_HIERARCHY: // make a saturated hierarchy
