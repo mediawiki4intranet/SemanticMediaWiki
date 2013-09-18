@@ -346,8 +346,8 @@ class SMWDIProperty extends SMWDataItem {
 
 		global $smwgContLang, $smwgUseCategoryHierarchy;
 		$datatypeLabels = $smwgContLang->getDatatypeLabels();
-		SMWDIProperty::$m_prop_labels  = $smwgContLang->getPropertyLabels() + $datatypeLabels;
-		SMWDIProperty::$m_prop_aliases = $smwgContLang->getPropertyAliases() + $smwgContLang->getDatatypeAliases();
+		SMWDIProperty::$m_prop_labels  = $smwgContLang->getPropertyLabels();
+		SMWDIProperty::$m_prop_aliases = $smwgContLang->getPropertyAliases();
 		// Setup built-in predefined properties.
 		// NOTE: all ids must start with underscores. The translation
 		// for each ID, if any, is defined in the language files.
