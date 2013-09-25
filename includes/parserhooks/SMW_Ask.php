@@ -49,6 +49,7 @@ class SMWAsk {
 			global $wgOut;
 			SMWOutputs::commitToOutputPage( $wgOut );
 		} else {
+			$parser->mOutput->mSMWAskCacheValidator = new SMWAskCacheValidator( $parser->mOutput, time() );
 			SMWOutputs::commitToParser( $parser );
 		}
 

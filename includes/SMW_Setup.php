@@ -214,6 +214,7 @@ function smwfRegisterClasses() {
 	// Parser hooks
 	$phDir = $smwgIP . 'includes/parserhooks/';
 	$wgAutoloadClasses['SMWAsk']                    = $phDir . 'SMW_Ask.php';
+	$wgAutoloadClasses['SMWAskCacheValidator']      = $phDir . 'SMW_AskCacheValidator.php';
 	$wgAutoloadClasses['SMWShow']                   = $phDir . 'SMW_Show.php';
 	$wgAutoloadClasses['SMWInfo']                   = $phDir . 'SMW_Info.php';
 	$wgAutoloadClasses['SMWSubobject']              = $phDir . 'SMW_Subobject.php';

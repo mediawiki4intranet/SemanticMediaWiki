@@ -375,6 +375,7 @@ class SMWParseData {
  		} else {
 			smwfGetStore()->clearData( $semdata->getSubject() );
 		}
+		SMWAskCacheValidator::update();
 
 		// Finally trigger relevant Updatejobs if necessary
 		if ( $updatejobflag ) {
