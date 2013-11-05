@@ -140,6 +140,12 @@ abstract class SMWDescription {
 		}
 	}
 
+	public function getHash() {
+		return md5(serialize($this));
+	}
+
+	abstract public function equals( SMWDescription $description );
+
 }
 
 /**
@@ -166,6 +172,10 @@ class SMWThingDescription extends SMWDescription {
 
 	public function prune( &$maxsize, &$maxdepth, &$log ) {
 		return $this;
+	}
+
+	public function equals( SMWDescription $description ) {
+		return $description instanceof SMWThingDescription;
 	}
 
 }
@@ -275,6 +285,26 @@ class SMWClassDescription extends SMWDescription {
 		return $result;
 	}
 
+	public function equals( SMWDescription $description ) {
+		if ( !( $description instanceof SMWClassDescription ) ) {
+			return false;
+		}
+		// external serialization
+		$serializations = array();
+		foreach ( $description->getCategories() as $wikiPage ) {
+			$serializations[$wikiPage->getSerialization()] = true;
+		}
+		// internal serialization and compare
+		foreach ( $this->m_diWikiPages as $wikiPage ) {
+			$key = $wikiPage->getSerialization();
+			if ( !isset( $serializations[$key] ) ) {
+				return false;
+			}
+			unset( $serializations[$key] );
+		}
+		return empty( $serializations );
+	}
+
 }
 
 
@@ -323,6 +353,13 @@ class SMWConceptDescription extends SMWDescription {
 
 	public function getQueryFeatures() {
 		return SMW_CONCEPT_QUERY;
+	}
+
+	public function equals( SMWDescription $description ) {
+		if ( !( $description instanceof SMWConceptDescription ) ) {
+			return false;
+		}
+		return $this->m_concept->getSerialization() === $description->getConcept()->getSerialization();
 	}
 
 	///NOTE: getSize and getDepth /could/ query the store to find the real size
@@ -379,6 +416,13 @@ class SMWNamespaceDescription extends SMWDescription {
 
 	public function getQueryFeatures() {
 		return SMW_NAMESPACE_QUERY;
+	}
+
+	public function equals( SMWDescription $description ) {
+		if ( !( $description instanceof SMWNamespaceDescription ) ) {
+			return false;
+		}
+		return $this->m_namespace === $description->getNamespace();
 	}
 
 }
@@ -474,6 +518,15 @@ class SMWValueDescription extends SMWDescription {
 
 	public function getSize() {
 		return 1;
+	}
+
+	public function equals( SMWDescription $description ) {
+		if ( !( $description instanceof SMWValueDescription ) ) {
+			return false;
+		}
+		return $description->getComparator() == $this->m_comparator &&
+			   $description->getDataItem()->getSerialization() === $this->m_dataItem->getSerialization()
+			;
 	}
 
 }
@@ -604,6 +657,44 @@ class SMWConjunction extends SMWDescription {
 
 			return $result;
 		}
+	}
+
+	public function equals( SMWDescription $description ) {
+		if ( !( $description instanceof SMWConjunction ) ) {
+			return false;
+		}
+		if ( $this->getHash() != $description->getHash() ) {
+			return false;
+		}
+		if ( $this->getSize() != $description->getSize() || $this->getDepth() != $description->getDepth() ) {
+			return false;
+		}
+		$self = array();
+		foreach( $this->m_descriptions as $d) {
+			$self[] = $d;
+		}
+		$desc = array();
+		foreach( $description->getDescriptions() as $d) {
+			$desc[] = $d;
+		}
+		foreach ( $self as $i => $sd ) {
+			if ( empty( $desc ) ) {
+				return false;
+			}
+			$found = false;
+			foreach ( $desc as $j => $dd ) {
+				if ( $sd->equals( $dd ) ) {
+					$found = true;
+					unset( $self[$i] );
+					unset( $desc[$j] );
+					break;
+				}
+			}
+			if ( !$found ) {
+				return false;
+			}
+		}
+		return empty( $self ) && empty( $desc );
 	}
 
 }
@@ -767,6 +858,45 @@ class SMWDisjunction extends SMWDescription {
 			return $result;
 		}
 	}
+
+	public function equals( SMWDescription $description ) {
+		if ( !( $description instanceof SMWDisjunction ) ) {
+			return false;
+		}
+		if ( $this->getHash() != $description->getHash() ) {
+			return false;
+		}
+		if ( $this->getSize() != $description->getSize() || $this->getDepth() != $description->getDepth() ) {
+			return false;
+		}
+		$self = array();
+		foreach( $this->m_descriptions as $d) {
+			$self[] = $d;
+		}
+		$desc = array();
+		foreach( $description->getDescriptions() as $d) {
+			$desc[] = $d;
+		}
+		foreach ( $self as $i => $sd ) {
+			if ( empty( $desc ) ) {
+				return false;
+			}
+			$found = false;
+			foreach ( $desc as $j => $dd ) {
+				if ( $sd->equals( $dd ) ) {
+					$found = true;
+					unset( $self[$i] );
+					unset( $desc[$j] );
+					break;
+				}
+			}
+			if ( !$found ) {
+				return false;
+			}
+		}
+		return empty( $self ) && empty( $desc );
+	}
+
 }
 
 /**
@@ -845,6 +975,13 @@ class SMWSomeProperty extends SMWDescription {
 		$result->setPrintRequests( $this->getPrintRequests() );
 
 		return $result;
+	}
+
+	public function equals( SMWDescription $description ) {
+		if ( !( $description instanceof SMWSomeProperty ) ) {
+			return false;
+		}
+		return $description->getDescription()->equals( $this->m_description ) && $description->getProperty()->getSerialization() === $this->m_property->getSerialization();
 	}
 
 }
@@ -955,4 +1092,12 @@ class SMWNegation extends SMWDescription {
 
 		return $result;
 	}
+
+	public function equals( SMWDescription $description ) {
+		if ( !( $description instanceof SMWNegation ) ) {
+			return false;
+		}
+		return $description->getDescription()->equals( $this->m_description ) && $description->isNegated() === $this->m_negated;
+	}
+
 }

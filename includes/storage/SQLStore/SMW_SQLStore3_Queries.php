@@ -66,6 +66,8 @@ class SMWSQLStore3Query {
 	 */
 	public $sortfields = array();
 
+	public $descriptionHash = null;
+
 	public $queryNumber;
 
 	public static $qnum = 0;
@@ -104,9 +106,16 @@ class SMWSQLStore3QueryEngine {
 	/** Local collection of error strings, passed on to callers if possible. */
 	protected $m_errors = array();
 
+	/**
+	 * Query optimizer
+	 * @var SMWQueryOptimizer
+	 */
+	protected $queryOptimizer;
+
 	public function __construct( SMWSQLStore3 $parentstore, $dbslave ) {
 		$this->m_store = $parentstore;
 		$this->m_dbs = $dbslave;
+		$this->queryOptimizer = new SMWQueryOptimizer();
 	}
 
 	/**
@@ -299,16 +308,21 @@ class SMWSQLStore3QueryEngine {
 		$this->executeQueries( $this->m_queries[$rootid] ); // execute query tree, resolve all dependencies
 		wfProfileOut( 'SMWSQLStore3Queries::executeMainQuery (SMW)' );
 
-		switch ( $query->querymode ) {
-			case SMWQuery::MODE_DEBUG:
-				$result = $this->getDebugQueryResult( $query, $rootid );
-			break;
-			case SMWQuery::MODE_COUNT:
-				$result = $this->getCountQueryResult( $query, $rootid );
-			break;
-			default:
-				$result = $this->getInstanceQueryResult( $query, $rootid );
-			break;
+		$query->applyRestrictions( $this->queryOptimizer );
+		$errors = $query->getErrors();
+
+		if ( empty( $errors ) ) {
+			switch ( $query->querymode ) {
+				case SMWQuery::MODE_DEBUG:
+					$result = $this->getDebugQueryResult( $query, $rootid );
+				break;
+				case SMWQuery::MODE_COUNT:
+					$result = $this->getCountQueryResult( $query, $rootid );
+				break;
+				default:
+					$result = $this->getInstanceQueryResult( $query, $rootid );
+				break;
+			}
 		}
 
 		$this->cleanUp();
@@ -540,6 +554,7 @@ class SMWSQLStore3QueryEngine {
 				$query->joinfield = "$query->alias.s_id";
 				$query->components[$cqid] = "$query->alias.o_id";
 				$this->m_queries[$cqid] = $cquery;
+				$this->queryOptimizer->add( $description, $cquery );
 			}
 		} elseif ( $description instanceof SMWValueDescription ) { // Only type '_wpg' objects can appear on query level (essentially as nominal classes).
 			if ( $description->getDataItem() instanceof SMWDIWikiPage ) {
@@ -622,6 +637,7 @@ class SMWSQLStore3QueryEngine {
 			$query->type = SMWSQLStore3Query::Q_NOQUERY; // no condition
 		}
 
+		$this->queryOptimizer->add( $description, $query );
 		$this->registerQuery( $query );
 		if ( $query->type != SMWSQLStore3Query::Q_NOQUERY  ) {
 			return $query->queryNumber;
@@ -707,6 +723,7 @@ class SMWSQLStore3QueryEngine {
 			$pquery->joinfield = array( $pid );
 			$query->components[$pqid] = "{$query->alias}.p_id";
 			$this->m_queries[$pqid] = $pquery;
+			$this->queryOptimizer->add( $description, $pquery );
 			// Alternative code without property hierarchies:
 			// $query->where = "{$query->alias}.p_id=" . $this->m_dbs->addQuotes( $pid );
 		} // else: no property column, no hierarchy queries
@@ -863,7 +880,7 @@ throw new MWException("Debug -- this code might be dead.");
 					$this->executeQueries( $subquery );
 
 					if ( $subquery->jointable !== '' ) { // Join with jointable.joinfield
-						$joinType = isset($subquery->jointype) ? $subquery->jointype : 'INNER';
+						$joinType = isset( $subquery->jointype ) ? $subquery->jointype : 'INNER';
 						$query->from .= " $joinType JOIN " . $this->m_dbs->tableName( $subquery->jointable ) . " AS $subquery->alias ON " . $subquery->joinfield . "=$joinfield";
 					} elseif ( $subquery->joinfield !== '' ) { // Require joinfield as "value" via WHERE.
 						$condition = '';
@@ -920,6 +937,10 @@ throw new MWException("Debug -- this code might be dead.");
 				$query = $result;
 			break;
 			case SMWSQLStore3Query::Q_DISJUNCTION:
+				if ( $this->checkCacheTables( $query ) ) {
+					break;
+				}
+
 				if ( $this->m_qmode !== SMWQuery::MODE_DEBUG ) {
 					$this->m_dbs->query( $this->getCreateTempIDTableSQL( $this->m_dbs->tableName( $query->alias ) ), 'SMW::executeQueries' );
 				}
@@ -928,6 +949,15 @@ throw new MWException("Debug -- this code might be dead.");
 
 				foreach ( $query->components as $qid => $joinfield ) {
 					$subquery = $this->m_queries[$qid];
+
+					$cachedQuery = $this->queryOptimizer->getTemporaryTableSubquery( $query->queryNumber, $subquery->descriptionHash );
+					if ( $cachedQuery !== null ) {
+						$cachedQuery = $this->m_queries[$cachedQuery];
+						$this->queryOptimizer->setQuery( $query, $cachedQuery );
+						continue;
+					}
+					$this->queryOptimizer->addTemporaryTableSubquery( $query->queryNumber, $subquery->queryNumber, $subquery->descriptionHash );
+
 					$this->executeQueries( $subquery );
 					$sql = '';
 
@@ -976,8 +1006,14 @@ throw new MWException("Debug -- this code might be dead.");
 				$query->joinfield = "$query->alias.id";
 				$query->sortfields = array(); // Make sure we got no sortfields.
 				// TODO: currently this eliminates sortkeys, possibly keep them (needs different temp table format though, maybe not such a good thing to do)
+
+				$this->queryOptimizer->addTemporaryTableQuery( $query->queryNumber, $query->descriptionHash );
 			break;
 			case SMWSQLStore3Query::Q_NEGATION:
+				if ( $this->checkCacheTables( $query ) ) {
+					break;
+				}
+
 				// pick one subquery with jointable as anchor point ...
 				reset( $query->components );
 				list ( $key, $tmp ) = each( $query->components );
@@ -1017,6 +1053,8 @@ throw new MWException("Debug -- this code might be dead.");
 				$query->joinfield = "$query->alias.id";
 				$query->where = "$query->alias.id IS NULL";
 				$query->sortfields = array(); // Make sure we got no sortfields.
+
+				$this->queryOptimizer->addTemporaryTableQuery( $query->queryNumber, $query->descriptionHash );
 			break;
 			case SMWSQLStore3Query::Q_PROP_HIERARCHY:
 			case SMWSQLStore3Query::Q_CLASS_HIERARCHY: // make a saturated hierarchy
@@ -1024,6 +1062,8 @@ throw new MWException("Debug -- this code might be dead.");
 			break;
 			case SMWSQLStore3Query::Q_VALUE: break; // nothing to do
 		}
+
+		return true;
 	}
 
 	/**
@@ -1043,6 +1083,9 @@ throw new MWException("Debug -- this code might be dead.");
 		if ( $depth <= 0 ) { // treat as value, no recursion
 			$query->type = SMWSQLStore3Query::Q_VALUE;
 			wfProfileOut( $fname );
+			return;
+		}
+		if ( $this->checkCacheTables( $query ) ) {
 			return;
 		}
 
@@ -1073,6 +1116,8 @@ throw new MWException("Debug -- this code might be dead.");
 		$this->m_querylog[$query->alias] = array( "Recursively computed hierarchy for element(s) $values." );
 		$query->jointable = $query->alias;
 		$query->joinfield = "$query->alias.id";
+
+		$this->queryOptimizer->addTemporaryTableQuery( $query->queryNumber, $query->descriptionHash );
 
 		if ( $this->m_qmode == SMWQuery::MODE_DEBUG ) {
 			wfProfileOut( $fname );
@@ -1125,6 +1170,17 @@ throw new MWException("Debug -- this code might be dead.");
 		$this->m_dbs->query( ( ( $wgDBtype == 'postgres' ) ? 'DROP TABLE IF EXISTS smw_res' : 'DROP TEMPORARY TABLE smw_res' ), 'SMW::executeHierarchyQuery' );
 
 		wfProfileOut( $fname );
+	}
+
+	protected function checkCacheTables( SMWSQLStore3Query $query ) {
+		$cachedQuery = $this->queryOptimizer->getTemporaryTableQuery( $query->descriptionHash );
+		if ( $cachedQuery !== null) {
+			$cachedQuery = $this->m_queries[$cachedQuery];
+			$this->queryOptimizer->setQuery( $query, $cachedQuery );
+			return true;
+		}
+
+		return false;
 	}
 
 	/**

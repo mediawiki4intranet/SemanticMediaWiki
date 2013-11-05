@@ -173,27 +173,28 @@ class SMWQuery {
 	/**
 	 * Apply structural restrictions to the current description.
 	 */
-	public function applyRestrictions() {
-		global $smwgQMaxSize, $smwgQMaxDepth, $smwgQConceptMaxSize, $smwgQConceptMaxDepth;
+	public function applyRestrictions( SMWQueryOptimizer $queryOptimizer = null ) {
+		global $smwgQMaxSize, $smwgQMaxDepth, $smwgQConceptMaxSize, $smwgQConceptMaxDepth, $smwgQueryOptimazerEnabled;
 
-		if ( !is_null( $this->m_description ) ) {
-			if ( $this->m_concept ) {
-				$maxsize = $smwgQConceptMaxSize;
-				$maxdepth = $smwgQConceptMaxDepth;
-			} else {
-				$maxsize = $smwgQMaxSize;
-				$maxdepth = $smwgQMaxDepth;
-			}
+		if ( $this->m_concept ) {
+			$maxsize = $smwgQConceptMaxSize;
+			$maxdepth = $smwgQConceptMaxDepth;
+		} else {
+			$maxsize = $smwgQMaxSize;
+			$maxdepth = $smwgQMaxDepth;
+		}
 
-			$log = array();
+		$log = array();
+		if ( $smwgQueryOptimazerEnabled && $queryOptimizer !== null ) {
+			$queryOptimizer->checkRestrictions( $maxsize, $maxdepth, $log );
+		} else if ( !$smwgQueryOptimazerEnabled && !is_null( $this->m_description ) ) {
 			$this->m_description = $this->m_description->prune( $maxsize, $maxdepth, $log );
-
-			if ( count( $log ) > 0 ) {
-				$this->m_errors[] = wfMessage(
-					'smw_querytoolarge',
-					str_replace( '[', '&#x005B;', implode( ', ' , $log ) )
-				)->inContentLanguage()->text();
-			}
+		}
+		if ( count( $log ) > 0 ) {
+			$this->m_errors[] = wfMessage(
+				'smw_querytoolarge',
+				str_replace( '[', '&#x005B;', implode( ', ' , $log ) )
+			)->inContentLanguage()->text();
 		}
 	}
 
