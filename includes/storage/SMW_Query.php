@@ -186,6 +186,7 @@ class SMWQuery {
 			}
 
 			$log = array();
+			SMWDescription::$optimizedSizes = array();
 			$this->m_description = $this->m_description->prune( $maxsize, $maxdepth, $log );
 
 			if ( count( $log ) > 0 ) {

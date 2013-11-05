@@ -16,10 +16,14 @@
  */
 abstract class SMWDescription {
 
+	static $optimizedSizes = array();
+
 	/**
 	 * @var array of SMWPrintRequest
 	 */
 	protected $m_printreqs = array();
+
+	protected $hash = null;
 
 	/**
 	 * Get the (possibly empty) array of all print requests that
@@ -130,15 +134,26 @@ abstract class SMWDescription {
 
 			$result = new SMWThingDescription();
 			$result->setPrintRequests( $this->getPrintRequests() );
+			$this->hash = null;
 
 			return $result;
 		} else {
 			$maxsize = $maxsize - $this->getSize();
 			$maxdepth = $maxdepth - $this->getDepth();
+			$this->hash = null;
 
 			return $this;
 		}
 	}
+
+	public function getHash() {
+		if ( $this->hash ===null ) {
+			$this->calcHash();
+		}
+		return $this->hash;
+	}
+
+	abstract protected function calcHash();
 
 }
 
@@ -168,6 +183,10 @@ class SMWThingDescription extends SMWDescription {
 		return $this;
 	}
 
+	protected function calcHash() {
+		$this->hash = md5( __CLASS__ );
+	}
+
 }
 
 /**
@@ -191,6 +210,7 @@ class SMWClassDescription extends SMWDescription {
 	 * @throws Exception
 	 */
 	public function __construct( $content ) {
+		$this->mOptimizable = true;
 		if ( $content instanceof SMWDIWikiPage ) {
 			$this->m_diWikiPages = array( $content );
 		} elseif ( is_array( $content ) ) {
@@ -205,6 +225,7 @@ class SMWClassDescription extends SMWDescription {
 	 */
 	public function addDescription( SMWClassDescription $description ) {
 		$this->m_diWikiPages = array_merge( $this->m_diWikiPages, $description->getCategories() );
+		$this->hash = null;
 	}
 
 	/**
@@ -259,6 +280,7 @@ class SMWClassDescription extends SMWDescription {
 	public function prune( &$maxsize, &$maxdepth, &$log ) {
 		if ( $maxsize >= $this->getSize() ) {
 			$maxsize = $maxsize - $this->getSize();
+			$this->hash = null;
 			return $this;
 		} elseif ( $maxsize <= 0 ) {
 			$log[] = $this->getQueryString();
@@ -272,7 +294,17 @@ class SMWClassDescription extends SMWDescription {
 		}
 
 		$result->setPrintRequests( $this->getPrintRequests() );
+		$this->hash = null;
 		return $result;
+	}
+
+	protected function calcHash() {
+		$keys = array();
+		foreach ( $this->m_diWikiPages as $diWikiPage ) {
+			$keys[] = md5( $diWikiPage->getSerialization() );
+		}
+		sort( $keys );
+		$this->hash = md5( __CLASS__ . ":" . implode( ',', $keys ) );
 	}
 
 }
@@ -323,6 +355,10 @@ class SMWConceptDescription extends SMWDescription {
 
 	public function getQueryFeatures() {
 		return SMW_CONCEPT_QUERY;
+	}
+
+	protected function calcHash() {
+		$this->hash = md5( __CLASS__ . ":" . $this->m_concept->getSerialization() );
 	}
 
 	///NOTE: getSize and getDepth /could/ query the store to find the real size
@@ -379,6 +415,10 @@ class SMWNamespaceDescription extends SMWDescription {
 
 	public function getQueryFeatures() {
 		return SMW_NAMESPACE_QUERY;
+	}
+
+	protected function calcHash() {
+		$this->hash = md5( __CLASS__ . ":" . $this->m_namespace );
 	}
 
 }
@@ -472,8 +512,9 @@ class SMWValueDescription extends SMWDescription {
 		}
 	}
 
-	public function getSize() {
-		return 1;
+	protected function calcHash() {
+		$this->hash = md5( __CLASS__ . ":" . $this->m_comparator . ":" .
+			$this->m_dataItem->getSerialization() . ":" . ( $this->m_property ? $this->m_property->getSerialization() : '' ) );
 	}
 
 }
@@ -513,6 +554,7 @@ class SMWConjunction extends SMWDescription {
 			$this->m_printreqs = array_merge( $this->m_printreqs, $description->getPrintRequests() );
 			$description->setPrintRequests( array() );
 		}
+		$this->hash = null;
 	}
 
 	public function getQueryString( $asvalue = false ) {
@@ -541,8 +583,13 @@ class SMWConjunction extends SMWDescription {
 	public function getSize() {
 		$size = 0;
 
+		$seen = array();
 		foreach ( $this->m_descriptions as $desc ) {
-			$size += $desc->getSize();
+			// Eliminate the cost of identical descriptions
+			if ( !isset( $seen[$desc->getHash()] ) ) {
+				$size += $desc->getSize();
+				$seen[$desc->getHash()] = true;
+			}
 		}
 
 		return $size;
@@ -594,6 +641,7 @@ class SMWConjunction extends SMWDescription {
 			}
 
 			$result->setPrintRequests( $this->getPrintRequests() );
+			$this->hash = null;
 
 			return $result;
 		} else {
@@ -601,9 +649,20 @@ class SMWConjunction extends SMWDescription {
 
 			$result = new SMWThingDescription();
 			$result->setPrintRequests( $this->getPrintRequests() );
+			$this->hash = null;
 
 			return $result;
 		}
+	}
+
+	protected function calcHash() {
+		$keys = array();
+		foreach ( $this->m_descriptions as $descr ) {
+			$keys[$descr->getHash()] = true;
+		}
+		$keys = array_keys( $keys );
+		sort( $keys );
+		$this->hash = md5( __CLASS__ . ":" . implode( ',', $keys ) );
 	}
 
 }
@@ -661,6 +720,8 @@ class SMWDisjunction extends SMWDescription {
 		///TODO: This may not be a good solution, since it does modify $description and since it does not react to future cahges
 		$this->m_printreqs = array_merge( $this->m_printreqs, $description->getPrintRequests() );
 		$description->setPrintRequests( array() );
+
+		$this->hash = null;
 	}
 
 	public function getQueryString( $asvalue = false ) {
@@ -701,10 +762,21 @@ class SMWDisjunction extends SMWDescription {
 	}
 
 	public function getSize() {
+		// Equal disjunction queries are cached because they're executed using temporary tables
+		if ( isset( self::$optimizedSizes[$this->getHash()] ) ) {
+			return 0;
+		}
+		self::$optimizedSizes[$this->getHash()] = true;
+
 		$size = 0;
 
+		$seen = array();
 		foreach ( $this->m_descriptions as $desc ) {
-			$size += $desc->getSize();
+			// Eliminate the cost of identical descriptions
+			if ( !isset( $seen[$desc->getHash()] ) ) {
+				$seen[$desc->getHash()] = true;
+				$size += $desc->getSize();
+			}
 		}
 
 		return $size;
@@ -756,6 +828,7 @@ class SMWDisjunction extends SMWDescription {
 			}
 
 			$result->setPrintRequests( $this->getPrintRequests() );
+			$this->hash = null;
 
 			return $result;
 		} else {
@@ -763,10 +836,22 @@ class SMWDisjunction extends SMWDescription {
 
 			$result = new SMWThingDescription();
 			$result->setPrintRequests( $this->getPrintRequests() );
+			$this->hash = null;
 
 			return $result;
 		}
 	}
+
+	protected function calcHash() {
+		$keys = array();
+		foreach ( $this->m_descriptions as $descr ) {
+			$keys[$descr->getHash()] = true;
+		}
+		$keys = array_keys( $keys );
+		sort( $keys );
+		$this->hash = md5( __CLASS__ . ":" . implode( ',', $keys ) );
+	}
+
 }
 
 /**
@@ -843,8 +928,13 @@ class SMWSomeProperty extends SMWDescription {
 
 		$result = new SMWSomeProperty( $this->m_property, $this->m_description->prune( $maxsize, $maxdepth, $log ) );
 		$result->setPrintRequests( $this->getPrintRequests() );
+		$this->hash = null;
 
 		return $result;
+	}
+
+	protected function calcHash() {
+		$this->hash = md5( __CLASS__ . ":" . $this->m_description->getHash() . ":" . $this->m_property->getSerialization() );
 	}
 
 }
@@ -895,6 +985,7 @@ class SMWNegation extends SMWDescription {
 			$this->m_printreqs = array_merge( $this->m_printreqs, $description->getPrintRequests() );
 			$description->setPrintRequests( array() );
 		}
+		$this->hash = null;
 	}
 
 	public function getQueryString( $asvalue = false ) {
@@ -922,6 +1013,13 @@ class SMWNegation extends SMWDescription {
 	}
 
 	public function getSize() {
+		if ( $this->m_negated ) {
+			// Equal negation queries are cached because they're executed using temporary tables
+			if ( isset( self::$optimizedSizes[$this->getHash()] ) ) {
+				return 0;
+			}
+			self::$optimizedSizes[$this->getHash()] = true;
+		}
 		return $this->m_description->getSize();
 	}
 
@@ -952,7 +1050,13 @@ class SMWNegation extends SMWDescription {
 
 		$desc = $result->getDescription();
 		$desc->setPrintRequests( $this->getPrintRequests() );
+		$this->hash = null;
 
 		return $result;
 	}
+
+	protected function calcHash() {
+		$this->hash = md5( __CLASS__ . ":" . $this->m_description->getHash() . ":" . ( $this->m_negated ? 'true' : 'false' ) );
+	}
+
 }
