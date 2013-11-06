@@ -2,22 +2,19 @@
 
 class SMWQueryOptimizer {
 
-    /**
-     * @var SMWDescription[]
-     */
+	/**
+	 * @var SMWDescription[]
+	 */
 	protected $storage = array();
 	protected $cacheTemporalyTables = array();
 	protected $cacheTemporalyTablesSubqueries = array();
 
 	protected $enabled = false;
-    
-    const SIZE_LOG_PREFIX = 'size_';
-    const DEPTH_LOG_PREFIX = 'depth_';
-    protected $size = 0;
-    protected $depth = 0;
-    protected $log = array();
 
-    public function __construct() {
+	protected $sizeReduce = 0;
+	protected $depth = 0;
+
+	public function __construct() {
 		global $smwgQueryOptimazerEnabled;
 		$this->enabled = $smwgQueryOptimazerEnabled;
 	}
@@ -25,6 +22,7 @@ class SMWQueryOptimizer {
 	public function isEnabled() {
 		return $this->enabled;
 	}
+
 	/**
 	 * Add relation between description and query
 	 * @param SMWDescription $description
@@ -51,12 +49,10 @@ class SMWQueryOptimizer {
 			return;
 		}
 		if ( !isset( $this->cacheTemporalyTables[$descriptionHash] ) ) {
+			if ( isset( $this->storage[$descriptionHash] ) ) {
+				$this->depth = max ( $this->depth, $this->storage[$descriptionHash]->getDepth() );
+			}
 			$this->cacheTemporalyTables[$descriptionHash] = $queryNumber;
-
-            $this->size += isset( $this->storage[$descriptionHash] ) ? $this->storage[$descriptionHash]->getSize() : 0;
-            $this->depth += isset( $this->storage[$descriptionHash] ) ? $this->storage[$descriptionHash]->getDepth() : 0;
-            $this->log[static::SIZE_LOG_PREFIX . $this->size]   = isset( $this->storage[$descriptionHash] ) ? $this->storage[$descriptionHash]->getQueryString() : '';
-            $this->log[static::DEPTH_LOG_PREFIX . $this->depth] = &$this->log[static::SIZE_LOG_PREFIX . $this->depth];
 		}
 	}
 
@@ -70,6 +66,9 @@ class SMWQueryOptimizer {
 			return null;
 		}
 		if ( isset( $this->cacheTemporalyTables[$descriptionHash] ) ) {
+			if ( isset( $this->storage[$descriptionHash] ) ) {
+				$this->sizeReduce += $this->storage[$descriptionHash]->getSize();
+			}
 			return $this->cacheTemporalyTables[$descriptionHash];
 		}
 		return null;
@@ -137,9 +136,10 @@ class SMWQueryOptimizer {
 			$dest->jointype = $sorce->jointype;
 		}
 	}
-    
-    public function checkRestrictions( $maxsize, $maxdepth, $log ) {
-    }
+
+	public function getMetrics( $descriptionSize ) {
+		return array( $descriptionSize - $this->sizeReduce, $this->depth );
+	}
 
 	/**
 	 * Hash-key in storage

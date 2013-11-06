@@ -514,5 +514,5 @@ $smwgAutoRefreshSubject = true;
 ###
 # Sets whether or not to optimize queries
 ##
-$smwgQueryOptimazerEnabled = false;
+$smwgQueryOptimazerEnabled = true;
 ##

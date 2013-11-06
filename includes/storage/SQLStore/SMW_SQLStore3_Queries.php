@@ -241,7 +241,7 @@ class SMWSQLStore3QueryEngine {
 	 *
 	 * @return mixed: depends on $query->querymode
 	 */
-	public function getQueryResult( SMWQuery $query ) {
+	public function getQueryResult( SMWQuery $query, $secondary = false ) {
 		global $smwgIgnoreQueryErrors, $smwgQSortingSupport;
 
 		if ( ( !$smwgIgnoreQueryErrors || $query->getDescription() instanceof SMWThingDescription ) &&
@@ -310,19 +310,24 @@ class SMWSQLStore3QueryEngine {
 
 		$query->applyRestrictions( $this->queryOptimizer );
 		$errors = $query->getErrors();
-
-		if ( empty( $errors ) ) {
-			switch ( $query->querymode ) {
-				case SMWQuery::MODE_DEBUG:
-					$result = $this->getDebugQueryResult( $query, $rootid );
-				break;
-				case SMWQuery::MODE_COUNT:
-					$result = $this->getCountQueryResult( $query, $rootid );
-				break;
-				default:
-					$result = $this->getInstanceQueryResult( $query, $rootid );
-				break;
+		if ( !empty( $errors ) ) {
+			if ( !$secondary ) {
+				$this->cleanUp();
+				$this->queryOptimizer = new SMWQueryOptimizer();
+				return $this->getQueryResult( $query, true );
 			}
+		}
+
+		switch ( $query->querymode ) {
+			case SMWQuery::MODE_DEBUG:
+				$result = $this->getDebugQueryResult( $query, $rootid );
+			break;
+			case SMWQuery::MODE_COUNT:
+				$result = $this->getCountQueryResult( $query, $rootid );
+			break;
+			default:
+				$result = $this->getInstanceQueryResult( $query, $rootid );
+			break;
 		}
 
 		$this->cleanUp();

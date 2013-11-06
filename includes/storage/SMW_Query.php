@@ -46,6 +46,9 @@ class SMWQuery {
 	protected $m_extraprintouts = array(); // SMWPrintoutRequest objects supplied outside querystring
 	protected $m_mainlabel = ''; // Since 1.6
 
+	protected $size = 0;
+	protected $depth = 0;
+
 	/**
 	 * Constructor.
 	 * @param $description SMWDescription object describing the query conditions
@@ -95,6 +98,14 @@ class SMWQuery {
 
 	public function getDescription() {
 		return $this->m_description;
+	}
+
+	public function getSize() {
+		return $this->size > 0 ? $this->size : $this->m_description->getSize();
+	}
+
+	public function getDepth() {
+		return $this->depth > 0 ? $this->depth : $this->m_description->getDepth();
 	}
 
 	public function setExtraPrintouts( $extraprintouts ) {
@@ -185,11 +196,24 @@ class SMWQuery {
 		}
 
 		$log = array();
-		if ( $smwgQueryOptimazerEnabled && $queryOptimizer !== null ) {
-			$queryOptimizer->checkRestrictions( $maxsize, $maxdepth, $log );
-		} else if ( !$smwgQueryOptimazerEnabled && !is_null( $this->m_description ) ) {
-			$this->m_description = $this->m_description->prune( $maxsize, $maxdepth, $log );
+
+		$description = $this->m_description;
+
+		if ( !is_null( $this->m_description ) ) {
+			if ( $smwgQueryOptimazerEnabled ) {
+				if ( $queryOptimizer !== null ) {
+					list ( $this->size, $this->depth ) = $queryOptimizer->getMetrics( $this->m_description->getSize() );
+					if ( $this->size > $maxsize || $this->depth > $maxdepth ) {
+                        $this->m_errors[] = wfMessage( 'smw_queryoptimizedtoolarge' )->inContentLanguage()->text();
+						$description = $this->m_description->prune( $maxsize, $maxdepth, $log );
+					}
+				}
+			} else {
+				$description = $this->m_description->prune( $maxsize, $maxdepth, $log );
+			}
 		}
+		$this->m_description = $description;
+
 		if ( count( $log ) > 0 ) {
 			$this->m_errors[] = wfMessage(
 				'smw_querytoolarge',
