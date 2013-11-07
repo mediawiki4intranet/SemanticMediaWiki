@@ -287,6 +287,7 @@ function smwfRegisterClasses() {
 	$wgAutoloadClasses['SMWDIHandlerTime']                = $stoDirSQL . 'SMW_DIHandler_Time.php';
 	$wgAutoloadClasses['SMWDIHandlerConcept']             = $stoDirSQL . 'SMW_DIHandler_Concept.php';
 	$wgAutoloadClasses['SMWDIHandlerGeoCoord']            = $stoDirSQL . 'SMW_DIHandler_GeoCoord.php';
+	$wgAutoloadClasses['SMWPrivilegesChecker']            = $stoDirSQL . 'SMW_PrivilegesChecker.php';
 	
 	// Special pages and closely related helper classes
 	$specDir = $smwgIP . 'specials/';

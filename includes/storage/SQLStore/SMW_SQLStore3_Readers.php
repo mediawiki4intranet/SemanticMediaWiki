@@ -259,6 +259,14 @@ class SMWSQLStore3Readers {
 
 		wfProfileIn( "SMWSQLStore3::fetchSemanticData-" . $proptable->getName() .  " (SMW)" );
 		$result = array();
+		if ( !SMWPrivilegesChecker::canReadWikiPage( $object ) ) {
+			global $smwgPageSpecialProperties;
+			if ( !$proptable->isFixedPropertyTable() || !in_array( $proptable->getFixedProperty(), $smwgPageSpecialProperties ) ) {
+				wfProfileOut( "SMWSQLStore3::fetchSemanticData-" . $proptable->getName() .  " (SMW)" );
+				return $result;
+			}
+		}
+
 		$db = wfGetDB( DB_SLAVE );
 
 		$diHandler = $this->store->getDataItemHandlerForDIType( $proptable->getDiType() );
@@ -375,6 +383,7 @@ class SMWSQLStore3Readers {
 		if ( $property->isInverse() ) { // inverses are working differently
 			$noninverse = new SMWDIProperty( $property->getKey(), false );
 			$result = $this->getPropertyValues( $value, $noninverse, $requestoptions );
+			SMWPrivilegesChecker::canReadWikiPages( $result );
 			wfProfileOut( "SMWSQLStore3::getPropertySubjects (SMW)" );
 			return $result;
 		}
@@ -428,6 +437,7 @@ class SMWSQLStore3Readers {
 
 		$db->freeResult( $res );
 		wfProfileOut( "SMWSQLStore3::getPropertySubjects (SMW)" );
+		SMWPrivilegesChecker::canReadWikiPages( $result );
 
 		return $result;
 	}
@@ -588,6 +598,11 @@ class SMWSQLStore3Readers {
 
 		$db = wfGetDB( DB_SLAVE );
 		$result = array();
+
+		if ( !SMWPrivilegesChecker::canReadWikiPage( $value ) ) {
+			wfProfileOut( "SMWSQLStore3::getInProperties (SMW)" );
+			return $result;
+		}
 
 		// Potentially need to get more results, since options apply to union.
 		if ( $requestoptions !== null ) {

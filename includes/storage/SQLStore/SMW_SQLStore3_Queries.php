@@ -467,6 +467,7 @@ class SMWSQLStore3QueryEngine {
 		}
 
 		$this->m_dbs->freeResult( $res );
+		SMWPrivilegesChecker::canReadWikiPages( $qr );
 		$result = new SMWQueryResult( $prs, $query, $qr, $this->m_store, ( $count > $query->getLimit() ) );
 
 		wfProfileOut( 'SMWSQLStore3Queries::getInstanceQueryResult (SMW)' );
