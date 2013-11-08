@@ -151,7 +151,6 @@ Results might not be as expected.',
 	'smw_nodisjunctions'    => 'Disjunctions in queries are not supported in this wiki and part of the query was dropped ($1).',
 	'smw_nonegations'       => 'Negations in queries are not supported in this wiki and part of the query was dropped ($1).',
 	'smw_querytoolarge'     => 'The following query conditions could not be considered due to the wikis restrictions in query size or depth: $1.',
-	'smw_queryoptimizedtoolarge' => 'The optimized query conditions could not be considered due to the wikis restrictions in query size or depth.',
 	'smw_notemplategiven'   => 'Provide a value for the parameter "template" for this query format to work.',
 
 	// Messages from the database backend
@@ -11466,7 +11465,6 @@ $messages['ru'] = array(
 	'smw_nodisjunctions' => 'Ошибка: Дизъюнкции (логическое ИЛИ) не поддерживаются данным сайтом, поэтому использующая их часть запроса была проигнорирована ($1).',
 	'smw_nonegations' => 'Ошибка: Логическое отрицание не поддерживаются данным сайтом, поэтому использующая их часть запроса была проигнорирована ($1).',
 	'smw_querytoolarge' => 'Ошибка: Указанные условия запроса “$1” не могут быть выполнены из-за ограничения на глубину или размер запроса.',
-	'smw_queryoptimizedtoolarge' => 'Ошибка: Оптимизированный запрос не может быть выполнент из-за ограничения на глубину или размер запроса.',
 	'smw_notemplategiven' => 'Чтобы данный запрос выполнялся, необходимо задать значение для параметра «template».',
 	'smw_db_sparqlqueryproblem' => 'Не удалось получить результат запроса к базе данных SPARQL. Эта может быть временная ошибка или проблема в программном обеспечении базы данных.',
 	'smw_db_sparqlqueryincomplete' => 'Поиск ответа на запрос оказался слишком сложным и был прерван. Некоторые результаты могут быть не показаны. По возможности попробуйте упростить запрос.',

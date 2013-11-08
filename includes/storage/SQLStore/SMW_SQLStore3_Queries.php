@@ -241,7 +241,7 @@ class SMWSQLStore3QueryEngine {
 	 *
 	 * @return mixed: depends on $query->querymode
 	 */
-	public function getQueryResult( SMWQuery $query, $secondary = false ) {
+	public function getQueryResult( SMWQuery $query ) {
 		global $smwgIgnoreQueryErrors, $smwgQSortingSupport;
 
 		if ( ( !$smwgIgnoreQueryErrors || $query->getDescription() instanceof SMWThingDescription ) &&
@@ -307,16 +307,6 @@ class SMWSQLStore3QueryEngine {
 		wfProfileIn( 'SMWSQLStore3Queries::executeMainQuery (SMW)' );
 		$this->executeQueries( $this->m_queries[$rootid] ); // execute query tree, resolve all dependencies
 		wfProfileOut( 'SMWSQLStore3Queries::executeMainQuery (SMW)' );
-
-		$query->applyRestrictions( $this->queryOptimizer );
-		$errors = $query->getErrors();
-		if ( !empty( $errors ) ) {
-			if ( !$secondary ) {
-				$this->cleanUp();
-				$this->queryOptimizer = new SMWQueryOptimizer();
-				return $this->getQueryResult( $query, true );
-			}
-		}
 
 		switch ( $query->querymode ) {
 			case SMWQuery::MODE_DEBUG:
@@ -1067,8 +1057,6 @@ throw new MWException("Debug -- this code might be dead.");
 			break;
 			case SMWSQLStore3Query::Q_VALUE: break; // nothing to do
 		}
-
-		return true;
 	}
 
 	/**

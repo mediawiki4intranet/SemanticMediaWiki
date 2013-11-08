@@ -237,7 +237,7 @@ function smwfRegisterClasses() {
 
 	$stoDir = $smwgIP . 'includes/storage/';
 	$wgAutoloadClasses['SMWQuery']                  = $stoDir . 'SMW_Query.php';
-	$wgAutoloadClasses['SMWQueryOptimizer']             = $stoDir . 'SMW_QueryOptimizer.php';
+	$wgAutoloadClasses['SMWQueryOptimizer']         = $stoDir . 'SMW_QueryOptimizer.php';
 	$wgAutoloadClasses['SMWQueryResult']            = $stoDir . 'SMW_QueryResult.php';
 	$wgAutoloadClasses['SMWResultArray']            = $stoDir . 'SMW_ResultArray.php';
 	$wgAutoloadClasses['SMWStore']                  = $stoDir . 'SMW_Store.php';

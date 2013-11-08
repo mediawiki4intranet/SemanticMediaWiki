@@ -2,12 +2,8 @@
 
 class SMWQueryOptimizer {
 
-	/**
-	 * @var SMWDescription[]
-	 */
-	protected $storage = array();
-	protected $cacheTemporalyTables = array();
-	protected $cacheTemporalyTablesSubqueries = array();
+	protected $cacheTemporaryTables = array();
+	protected $cacheTemporaryTablesSubqueries = array();
 
 	protected $enabled = false;
 
@@ -15,8 +11,8 @@ class SMWQueryOptimizer {
 	protected $depth = 0;
 
 	public function __construct() {
-		global $smwgQueryOptimazerEnabled;
-		$this->enabled = $smwgQueryOptimazerEnabled;
+		global $smwgQueryOptimizerEnabled;
+		$this->enabled = $smwgQueryOptimizerEnabled;
 	}
 
 	public function isEnabled() {
@@ -32,11 +28,7 @@ class SMWQueryOptimizer {
 		if ( !$this->enabled ) {
 			return;
 		}
-		$key = $this->getKey( $description );
-		if ( !isset( $this->storage[$key] ) ) {
-			$this->storage[$key] = $description;
-		}
-		$query->descriptionHash = $key;
+		$query->descriptionHash = $description->getHash();
 	}
 
 	/**
@@ -48,11 +40,8 @@ class SMWQueryOptimizer {
 		if ( !$this->enabled || $descriptionHash == null) {
 			return;
 		}
-		if ( !isset( $this->cacheTemporalyTables[$descriptionHash] ) ) {
-			if ( isset( $this->storage[$descriptionHash] ) ) {
-				$this->depth = max ( $this->depth, $this->storage[$descriptionHash]->getDepth() );
-			}
-			$this->cacheTemporalyTables[$descriptionHash] = $queryNumber;
+		if ( !isset( $this->cacheTemporaryTables[$descriptionHash] ) ) {
+			$this->cacheTemporaryTables[$descriptionHash] = $queryNumber;
 		}
 	}
 
@@ -65,11 +54,8 @@ class SMWQueryOptimizer {
 		if ( !$this->enabled || $descriptionHash == null) {
 			return null;
 		}
-		if ( isset( $this->cacheTemporalyTables[$descriptionHash] ) ) {
-			if ( isset( $this->storage[$descriptionHash] ) ) {
-				$this->sizeReduce += $this->storage[$descriptionHash]->getSize();
-			}
-			return $this->cacheTemporalyTables[$descriptionHash];
+		if ( isset( $this->cacheTemporaryTables[$descriptionHash] ) ) {
+			return $this->cacheTemporaryTables[$descriptionHash];
 		}
 		return null;
 	}
@@ -84,11 +70,11 @@ class SMWQueryOptimizer {
 		if ( !$this->enabled || $descriptionHash == null) {
 			return;
 		}
-		if ( !isset( $this->cacheTemporalyTablesSubqueries[$parentQueryNumber] ) ) {
-			$this->cacheTemporalyTablesSubqueries[$parentQueryNumber] = array();
+		if ( !isset( $this->cacheTemporaryTablesSubqueries[$parentQueryNumber] ) ) {
+			$this->cacheTemporaryTablesSubqueries[$parentQueryNumber] = array();
 		}
-		if ( !isset( $this->cacheTemporalyTablesSubqueries[$parentQueryNumber][$descriptionHash] ) ) {
-			$this->cacheTemporalyTablesSubqueries[$parentQueryNumber][$descriptionHash] = $queryNumber;
+		if ( !isset( $this->cacheTemporaryTablesSubqueries[$parentQueryNumber][$descriptionHash] ) ) {
+			$this->cacheTemporaryTablesSubqueries[$parentQueryNumber][$descriptionHash] = $queryNumber;
 		}
 	}
 
@@ -101,9 +87,9 @@ class SMWQueryOptimizer {
 		if ( !$this->enabled || $descriptionHash == null) {
 			return null;
 		}
-		if ( isset( $this->cacheTemporalyTablesSubqueries[$parentQueryNumber] ) &&
-				isset( $this->cacheTemporalyTablesSubqueries[$parentQueryNumber][$descriptionHash] ) ) {
-			return $this->cacheTemporalyTablesSubqueries[$parentQueryNumber][$descriptionHash];
+		if ( isset( $this->cacheTemporaryTablesSubqueries[$parentQueryNumber] ) &&
+				isset( $this->cacheTemporaryTablesSubqueries[$parentQueryNumber][$descriptionHash] ) ) {
+			return $this->cacheTemporaryTablesSubqueries[$parentQueryNumber][$descriptionHash];
 		}
 		return null;
 	}
@@ -111,52 +97,29 @@ class SMWQueryOptimizer {
 	/**
 	 * Set destination query from sorce one
 	 * @param SMWSQLStore3Query $dest
-	 * @param SMWSQLStore3Query $sorce
+	 * @param SMWSQLStore3Query $source
 	 */
-	public function setQuery( SMWSQLStore3Query &$dest, SMWSQLStore3Query $sorce) {
+	public function setQuery( SMWSQLStore3Query &$dest, SMWSQLStore3Query $source) {
 		if ( !$this->enabled ) {
 			return;
 		}
-		$dest->type = $sorce->type;
-		$dest->jointable = $sorce->jointable;
-		$dest->joinfield = $sorce->joinfield;
-		$dest->from = $sorce->from;
-		$dest->where = $sorce->where;
-		$dest->components = $sorce->components;
-		$dest->sortfields = $sorce->sortfields;
+		$dest->type = $source->type;
+		$dest->jointable = $source->jointable;
+		$dest->joinfield = $source->joinfield;
+		$dest->from = $source->from;
+		$dest->where = $source->where;
+		$dest->components = $source->components;
+		$dest->sortfields = $source->sortfields;
 		if ( !empty( $dest->alias ) ) {
-			if ( is_string( $dest->joinfield ) && strpos( $dest->joinfield, $sorce->alias ) !== false ) {
-				$dest->joinfield = str_replace( $sorce->alias, $dest->alias, $dest->joinfield );
+			if ( is_string( $dest->joinfield ) && strpos( $dest->joinfield, $source->alias ) !== false ) {
+				$dest->joinfield = str_replace( $source->alias, $dest->alias, $dest->joinfield );
 			}
-			if ( strpos( $dest->where, $sorce->alias ) !== false ) {
-				$dest->where = str_replace( $sorce->alias, $dest->alias, $dest->where );
-			}
-		}
-		if ( isset( $sorce->jointype ) ) {
-			$dest->jointype = $sorce->jointype;
-		}
-	}
-
-	public function getMetrics( $descriptionSize ) {
-		return array( $descriptionSize - $this->sizeReduce, $this->depth );
-	}
-
-	/**
-	 * Hash-key in storage
-	 * @param SMWDescription $description
-	 * @return string
-	 */
-	protected function getKey( $description ) {
-		$hash = $description->getHash();
-		if ( isset( $this->storage[$hash] ) ) {
-			return $hash;
-		}
-		foreach ( $this->storage as $h => $row ) {
-			if ( $description->equals( $row ) ) {
-				$hash = $h;
-				break;
+			if ( strpos( $dest->where, $source->alias ) !== false ) {
+				$dest->where = str_replace( $source->alias, $dest->alias, $dest->where );
 			}
 		}
-		return $hash;
+		if ( isset( $source->jointype ) ) {
+			$dest->jointype = $source->jointype;
+		}
 	}
 }

@@ -46,9 +46,6 @@ class SMWQuery {
 	protected $m_extraprintouts = array(); // SMWPrintoutRequest objects supplied outside querystring
 	protected $m_mainlabel = ''; // Since 1.6
 
-	protected $size = 0;
-	protected $depth = 0;
-
 	/**
 	 * Constructor.
 	 * @param $description SMWDescription object describing the query conditions
@@ -98,14 +95,6 @@ class SMWQuery {
 
 	public function getDescription() {
 		return $this->m_description;
-	}
-
-	public function getSize() {
-		return $this->size > 0 ? $this->size : $this->m_description->getSize();
-	}
-
-	public function getDepth() {
-		return $this->depth > 0 ? $this->depth : $this->m_description->getDepth();
 	}
 
 	public function setExtraPrintouts( $extraprintouts ) {
@@ -184,41 +173,27 @@ class SMWQuery {
 	/**
 	 * Apply structural restrictions to the current description.
 	 */
-	public function applyRestrictions( SMWQueryOptimizer $queryOptimizer = null ) {
-		global $smwgQMaxSize, $smwgQMaxDepth, $smwgQConceptMaxSize, $smwgQConceptMaxDepth, $smwgQueryOptimazerEnabled;
-
-		if ( $this->m_concept ) {
-			$maxsize = $smwgQConceptMaxSize;
-			$maxdepth = $smwgQConceptMaxDepth;
-		} else {
-			$maxsize = $smwgQMaxSize;
-			$maxdepth = $smwgQMaxDepth;
-		}
-
-		$log = array();
-
-		$description = $this->m_description;
+	public function applyRestrictions() {
+		global $smwgQMaxSize, $smwgQMaxDepth, $smwgQConceptMaxSize, $smwgQConceptMaxDepth;
 
 		if ( !is_null( $this->m_description ) ) {
-			if ( $smwgQueryOptimazerEnabled ) {
-				if ( $queryOptimizer !== null ) {
-					list ( $this->size, $this->depth ) = $queryOptimizer->getMetrics( $this->m_description->getSize() );
-					if ( $this->size > $maxsize || $this->depth > $maxdepth ) {
-                        $this->m_errors[] = wfMessage( 'smw_queryoptimizedtoolarge' )->inContentLanguage()->text();
-						$description = $this->m_description->prune( $maxsize, $maxdepth, $log );
-					}
-				}
+			if ( $this->m_concept ) {
+				$maxsize = $smwgQConceptMaxSize;
+				$maxdepth = $smwgQConceptMaxDepth;
 			} else {
-				$description = $this->m_description->prune( $maxsize, $maxdepth, $log );
+				$maxsize = $smwgQMaxSize;
+				$maxdepth = $smwgQMaxDepth;
 			}
-		}
-		$this->m_description = $description;
 
-		if ( count( $log ) > 0 ) {
-			$this->m_errors[] = wfMessage(
-				'smw_querytoolarge',
-				str_replace( '[', '&#x005B;', implode( ', ' , $log ) )
-			)->inContentLanguage()->text();
+			$log = array();
+			$this->m_description = $this->m_description->prune( $maxsize, $maxdepth, $log );
+
+			if ( count( $log ) > 0 ) {
+				$this->m_errors[] = wfMessage(
+					'smw_querytoolarge',
+					str_replace( '[', '&#x005B;', implode( ', ' , $log ) )
+				)->inContentLanguage()->text();
+			}
 		}
 	}
 
