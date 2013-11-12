@@ -900,10 +900,8 @@ throw new MWException("Debug -- this code might be dead.");
 				$key = false;
 
 				foreach ( $query->components as $qkey => $qid ) {
-					if ( $this->m_queries[$qkey]->jointable !== '' ) {
-						$key = $qkey;
-						break;
-					}
+					$key = $qkey;
+					break;
 				}
 
 				if ( $key !== false ) {
@@ -913,6 +911,11 @@ throw new MWException("Debug -- this code might be dead.");
 					// Execute it first (may change jointable and joinfield, e.g. when making temporary tables)
 					$this->executeQueries( $result );
 
+					if ( $result->type === SMWSQLStore3Query::Q_DISJUNCTION ) {
+						$result->type = SMWSQLStore3Query::Q_TABLE;
+						$result->where = '';
+						$result->components = array();
+					}
 					// ... and append to this query the remaining queries.
 					foreach ( $query->components as $qid => $joinfield ) {
 						$result->components[$qid] = $result->joinfield;
