@@ -91,11 +91,6 @@ abstract class SMWDescription {
 	abstract public function isSingleton();
 
 	/**
-	 * Get size of this description keeping query optimizations in mind:
-	 * Returns 0 if a same description was already seen somewhere
-	 */
-
-	/**
 	 * Compute the size of the decription. Default is 1.
 	 *
 	 * @return integer
