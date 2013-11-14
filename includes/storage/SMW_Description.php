@@ -518,7 +518,8 @@ class SMWValueDescription extends SMWDescription {
 	}
 
 	protected function calcHash() {
-		$this->hash = md5( __CLASS__ . ":" . $this->m_comparator . ":" . $this->m_dataItem->getSerialization() . ":" . $this->m_property->getSerialization() );
+		$this->hash = md5( __CLASS__ . ":" . $this->m_comparator . ":" .
+			$this->m_dataItem->getSerialization() . ":" . ( $this->m_property ? $this->m_property->getSerialization() : '' ) );
 	}
 
 }
