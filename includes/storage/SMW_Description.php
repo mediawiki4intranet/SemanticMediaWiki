@@ -16,7 +16,7 @@
  */
 abstract class SMWDescription {
 
-	static protected $optimizedSizes = array();
+	static $optimizedSizes = array();
 
 	/**
 	 * @var array of SMWPrintRequest
@@ -91,16 +91,16 @@ abstract class SMWDescription {
 	abstract public function isSingleton();
 
 	/**
+	 * Get size of this description keeping query optimizations in mind:
+	 * Returns 0 if a same description was already seen somewhere
+	 */
+
+	/**
 	 * Compute the size of the decription. Default is 1.
 	 *
 	 * @return integer
 	 */
 	public function getSize() {
-		global $smwgQueryOptimizerEnabled;
-		if ( $smwgQueryOptimizerEnabled && isset( static::$optimizedSizes[$this->getHash()] ) ) {
-			return 0;
-		}
-		static::$optimizedSizes[$this->getHash()] = true;
 		return 1;
 	}
 
@@ -188,7 +188,7 @@ class SMWThingDescription extends SMWDescription {
 		return $this;
 	}
 
-	public function calcHash() {
+	protected function calcHash() {
 		$this->hash = md5( __CLASS__ );
 	}
 
@@ -215,6 +215,7 @@ class SMWClassDescription extends SMWDescription {
 	 * @throws Exception
 	 */
 	public function __construct( $content ) {
+		$this->mOptimizable = true;
 		if ( $content instanceof SMWDIWikiPage ) {
 			$this->m_diWikiPages = array( $content );
 		} elseif ( is_array( $content ) ) {
@@ -265,11 +266,7 @@ class SMWClassDescription extends SMWDescription {
 	}
 
 	public function getSize() {
-		global $smwgQSubcategoryDepth, $smwgQueryOptimizerEnabled;
-		if ( $smwgQueryOptimizerEnabled && isset( static::$optimizedSizes[$this->getHash()] ) ) {
-			return 0;
-		}
-		static::$optimizedSizes[$this->getHash()] = true;
+		global $smwgQSubcategoryDepth;
 		if ( $smwgQSubcategoryDepth > 0 ) {
 			return 1; // disj. of cats should not cause much effort if we compute cat-hierarchies anyway!
 		} else {
@@ -306,7 +303,7 @@ class SMWClassDescription extends SMWDescription {
 		return $result;
 	}
 
-	public function calcHash() {
+	protected function calcHash() {
 		$keys = array();
 		foreach ( $this->m_diWikiPages as $diWikiPage ) {
 			$keys[] = md5( $diWikiPage->getSerialization() );
@@ -365,7 +362,7 @@ class SMWConceptDescription extends SMWDescription {
 		return SMW_CONCEPT_QUERY;
 	}
 
-	public function calcHash() {
+	protected function calcHash() {
 		$this->hash = md5( __CLASS__ . ":" . $this->m_concept->getSerialization() );
 	}
 
@@ -425,7 +422,7 @@ class SMWNamespaceDescription extends SMWDescription {
 		return SMW_NAMESPACE_QUERY;
 	}
 
-	public function calcHash() {
+	protected function calcHash() {
 		$this->hash = md5( __CLASS__ . ":" . $this->m_namespace );
 	}
 
@@ -520,7 +517,7 @@ class SMWValueDescription extends SMWDescription {
 		}
 	}
 
-	public function calcHash() {
+	protected function calcHash() {
 		$this->hash = md5( __CLASS__ . ":" . $this->m_comparator . ":" . $this->m_dataItem->getSerialization() . ":" . $this->m_property->getSerialization() );
 	}
 
@@ -588,15 +585,15 @@ class SMWConjunction extends SMWDescription {
 	}
 
 	public function getSize() {
-		global $smwgQueryOptimizerEnabled;
-		if ( $smwgQueryOptimizerEnabled && isset( static::$optimizedSizes[$this->getHash()] ) ) {
-			return 0;
-		}
-		static::$optimizedSizes[$this->getHash()] = true;
 		$size = 0;
 
+		$seen = array();
 		foreach ( $this->m_descriptions as $desc ) {
-			$size += $desc->getSize();
+			// Eliminate the cost of identical descriptions
+			if ( !isset( $seen[$desc->getHash()] ) ) {
+				$size += $desc->getSize();
+				$seen[$desc->getHash()] = true;
+			}
 		}
 
 		return $size;
@@ -662,11 +659,12 @@ class SMWConjunction extends SMWDescription {
 		}
 	}
 
-	public function calcHash() {
+	protected function calcHash() {
 		$keys = array();
 		foreach ( $this->m_descriptions as $descr ) {
-			$keys[] = $descr->getHash();
+			$keys[$descr->getHash()] = true;
 		}
+		$keys = array_keys( $keys );
 		sort( $keys );
 		$this->hash = md5( __CLASS__ . ":" . implode( ',', $keys ) );
 	}
@@ -768,15 +766,21 @@ class SMWDisjunction extends SMWDescription {
 	}
 
 	public function getSize() {
-		global $smwgQueryOptimizerEnabled;
-		if ( $smwgQueryOptimizerEnabled && isset( static::$optimizedSizes[$this->getHash()] ) ) {
+		// Equal disjunction queries are cached because they're executed using temporary tables
+		if ( isset( self::$optimizedSizes[$this->getHash()] ) ) {
 			return 0;
 		}
-		static::$optimizedSizes[$this->getHash()] = true;
+		self::$optimizedSizes[$this->getHash()] = true;
+
 		$size = 0;
 
+		$seen = array();
 		foreach ( $this->m_descriptions as $desc ) {
-			$size += $desc->getSize();
+			// Eliminate the cost of identical descriptions
+			if ( !isset( $seen[$desc->getHash()] ) ) {
+				$seen[$desc->getHash()] = true;
+				$size += $desc->getSize();
+			}
 		}
 
 		return $size;
@@ -842,13 +846,14 @@ class SMWDisjunction extends SMWDescription {
 		}
 	}
 
-	public function calcHash() {
+	protected function calcHash() {
 		$keys = array();
 		foreach ( $this->m_descriptions as $descr ) {
-			$keys[] = $descr->getHash();
+			$keys[$descr->getHash()] = true;
 		}
+		$keys = array_keys( $keys );
 		sort( $keys );
-		$this->hash =  md5( __CLASS__ . ":" . implode( ',', $keys ) );
+		$this->hash = md5( __CLASS__ . ":" . implode( ',', $keys ) );
 	}
 
 }
@@ -905,11 +910,6 @@ class SMWSomeProperty extends SMWDescription {
 	}
 
 	public function getSize() {
-		global $smwgQueryOptimizerEnabled;
-		if ( $smwgQueryOptimizerEnabled && isset( static::$optimizedSizes[$this->getHash()] ) ) {
-			return 0;
-		}
-		static::$optimizedSizes[$this->getHash()] = true;
 		return 1 + $this->getDescription()->getSize();
 	}
 
@@ -937,7 +937,7 @@ class SMWSomeProperty extends SMWDescription {
 		return $result;
 	}
 
-	public function calcHash() {
+	protected function calcHash() {
 		$this->hash = md5( __CLASS__ . ":" . $this->m_description->getHash() . ":" . $this->m_property->getSerialization() );
 	}
 
@@ -1017,11 +1017,13 @@ class SMWNegation extends SMWDescription {
 	}
 
 	public function getSize() {
-		global $smwgQueryOptimizerEnabled;
-		if ( $smwgQueryOptimizerEnabled && isset( static::$optimizedSizes[$this->getHash()] ) ) {
-			return 0;
+		if ( $this->m_negated ) {
+			// Equal negation queries are cached because they're executed using temporary tables
+			if ( isset( self::$optimizedSizes[$this->getHash()] ) ) {
+				return 0;
+			}
+			self::$optimizedSizes[$this->getHash()] = true;
 		}
-		static::$optimizedSizes[$this->getHash()] = true;
 		return $this->m_description->getSize();
 	}
 
@@ -1057,7 +1059,7 @@ class SMWNegation extends SMWDescription {
 		return $result;
 	}
 
-	public function calcHash() {
+	protected function calcHash() {
 		$this->hash = md5( __CLASS__ . ":" . $this->m_description->getHash() . ":" . ( $this->m_negated ? 'true' : 'false' ) );
 	}
 

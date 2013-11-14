@@ -502,10 +502,15 @@ class SMWSQLStore3QueryEngine {
 				( $description instanceof SMWDisjunction ) ) {
 			$query->type = ( $description instanceof SMWConjunction ) ? SMWSQLStore3Query::Q_CONJUNCTION : SMWSQLStore3Query::Q_DISJUNCTION;
 
+			$seen = array();
 			foreach ( $description->getDescriptions() as $subdesc ) {
-				$sub = $this->compileQueries( $subdesc );
-				if ( $sub >= 0 ) {
-					$query->components[$sub] = true;
+				// Eliminate identical descriptions
+				if ( !isset( $seen[ $subdesc->getHash() ] ) ) {
+					$seen[ $subdesc->getHash() ] = true;
+					$sub = $this->compileQueries( $subdesc );
+					if ( $sub >= 0 ) {
+						$query->components[$sub] = true;
+					}
 				}
 			}
 

@@ -5,19 +5,8 @@ class SMWQueryOptimizer {
 	protected $cacheTemporaryTables = array();
 	protected $cacheTemporaryTablesSubqueries = array();
 
-	protected $enabled = false;
-
 	protected $sizeReduce = 0;
 	protected $depth = 0;
-
-	public function __construct() {
-		global $smwgQueryOptimizerEnabled;
-		$this->enabled = $smwgQueryOptimizerEnabled;
-	}
-
-	public function isEnabled() {
-		return $this->enabled;
-	}
 
 	/**
 	 * Add relation between description and query
@@ -25,9 +14,6 @@ class SMWQueryOptimizer {
 	 * @param SMWSQLStore3Query $query
 	 */
 	public function add( $description, &$query ) {
-		if ( !$this->enabled ) {
-			return;
-		}
 		$query->descriptionHash = $description->getHash();
 	}
 
@@ -37,7 +23,7 @@ class SMWQueryOptimizer {
 	 * @param string $descriptionHash
 	 */
 	public function addTemporaryTableQuery( $queryNumber, $descriptionHash ) {
-		if ( !$this->enabled || $descriptionHash == null) {
+		if ( !$descriptionHash ) {
 			return;
 		}
 		if ( !isset( $this->cacheTemporaryTables[$descriptionHash] ) ) {
@@ -51,7 +37,7 @@ class SMWQueryOptimizer {
 	 * @return null|int
 	 */
 	public function getTemporaryTableQuery( $descriptionHash ) {
-		if ( !$this->enabled || $descriptionHash == null) {
+		if ( !$descriptionHash ) {
 			return null;
 		}
 		if ( isset( $this->cacheTemporaryTables[$descriptionHash] ) ) {
@@ -67,7 +53,7 @@ class SMWQueryOptimizer {
 	 * @param string $descriptionHash
 	 */
 	public function addTemporaryTableSubquery( $parentQueryNumber, $queryNumber, $descriptionHash ) {
-		if ( !$this->enabled || $descriptionHash == null) {
+		if ( $descriptionHash ) {
 			return;
 		}
 		if ( !isset( $this->cacheTemporaryTablesSubqueries[$parentQueryNumber] ) ) {
@@ -84,7 +70,7 @@ class SMWQueryOptimizer {
 	 * @param string $descriptionHash
 	 */
 	public function getTemporaryTableSubquery( $parentQueryNumber, $descriptionHash ) {
-		if ( !$this->enabled || $descriptionHash == null) {
+		if ( !$descriptionHash ) {
 			return null;
 		}
 		if ( isset( $this->cacheTemporaryTablesSubqueries[$parentQueryNumber] ) &&
@@ -100,9 +86,6 @@ class SMWQueryOptimizer {
 	 * @param SMWSQLStore3Query $source
 	 */
 	public function setQuery( SMWSQLStore3Query &$dest, SMWSQLStore3Query $source) {
-		if ( !$this->enabled ) {
-			return;
-		}
 		$dest->type = $source->type;
 		$dest->jointable = $source->jointable;
 		$dest->joinfield = $source->joinfield;

@@ -510,9 +510,3 @@ $smwgAutocompleteInSpecialAsk = true;
 ##
 $smwgAutoRefreshSubject = true;
 ##
-
-###
-# Sets whether or not to optimize queries
-##
-$smwgQueryOptimizerEnabled = true;
-##

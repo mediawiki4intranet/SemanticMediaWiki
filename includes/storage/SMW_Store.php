@@ -412,6 +412,7 @@ abstract class SMWStore {
 		if ( !is_null( $query ) ) {
 			$preEntries = array();
 			$preEntries['Generated Wiki-Query'] = '<pre>' . str_replace( '[', '&#x005B;', $query->getDescription()->getQueryString() ) . '</pre>';
+			SMWDescription::$optimizedSizes = array();
 			$preEntries['Query Metrics'] = 'Query-Size:' . $query->getDescription()->getSize() . '<br />' .
 						'Query-Depth:' . $query->getDescription()->getDepth();
 			$entries = array_merge( $preEntries, $entries );
