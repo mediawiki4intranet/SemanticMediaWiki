@@ -130,6 +130,7 @@ function smwfRegisterClasses() {
 	$wgAutoloadClasses['SMWQueryLanguage']          = $incDir . 'SMW_QueryLanguage.php';
 	$wgAutoloadClasses['SMWSemanticData']           = $incDir . 'SMW_SemanticData.php';
 	$wgAutoloadClasses['SMWPageLister']             = $incDir . 'SMW_PageLister.php';
+	$wgAutoloadClasses['SMWPrivilegesChecker']      = $incDir . 'SMW_PrivilegesChecker.php';
 
 	// Article pages
 	$apDir = $smwgIP . 'includes/articlepages/';
@@ -215,6 +216,7 @@ function smwfRegisterClasses() {
 	$phDir = $smwgIP . 'includes/parserhooks/';
 	$wgAutoloadClasses['SMWAsk']                    = $phDir . 'SMW_Ask.php';
 	$wgAutoloadClasses['SMWAskCacheValidator']      = $phDir . 'SMW_AskCacheValidator.php';
+	$wgAutoloadClasses['SMWPermValidator']          = $phDir . 'SMW_PermValidator.php';
 	$wgAutoloadClasses['SMWShow']                   = $phDir . 'SMW_Show.php';
 	$wgAutoloadClasses['SMWInfo']                   = $phDir . 'SMW_Info.php';
 	$wgAutoloadClasses['SMWSubobject']              = $phDir . 'SMW_Subobject.php';
@@ -287,7 +289,6 @@ function smwfRegisterClasses() {
 	$wgAutoloadClasses['SMWDIHandlerTime']                = $stoDirSQL . 'SMW_DIHandler_Time.php';
 	$wgAutoloadClasses['SMWDIHandlerConcept']             = $stoDirSQL . 'SMW_DIHandler_Concept.php';
 	$wgAutoloadClasses['SMWDIHandlerGeoCoord']            = $stoDirSQL . 'SMW_DIHandler_GeoCoord.php';
-	$wgAutoloadClasses['SMWPrivilegesChecker']            = $stoDirSQL . 'SMW_PrivilegesChecker.php';
 	
 	// Special pages and closely related helper classes
 	$specDir = $smwgIP . 'specials/';

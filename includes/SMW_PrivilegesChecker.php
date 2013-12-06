@@ -4,35 +4,38 @@ class SMWPrivilegesChecker {
 
 	public static function canReadWikiPage( $DIWikiPage ) {
 		$list = array( $DIWikiPage );
-		return static::canReadWikiPages( $list );
+		$r = static::canReadWikiPages( $list );
+		return reset( $r );
 	}
 
 	public static function canReadWikiPages( &$diWikiPageList ) {
 		$dbr = wfGetDB( DB_SLAVE );
-		$result = true;
+		$readability = array();
 		if ( !empty( $diWikiPageList ) ) {
 			$where = array();
 			$map = array();
 			foreach ( $diWikiPageList as $i => $wikiPage ) {
 				if ( $wikiPage instanceof SMWDIWikiPage ) {
-					$key = $wikiPage->getNamespace() . '_' . $wikiPage->getDBkey();
+					$key = $wikiPage->getNamespace() . ':' . $wikiPage->getDBkey();
 					$map[$key] = $i;
-					$where[] = 'page_title = ' . $dbr->addQuotes( $wikiPage->getDBkey() ) . ' AND page_namespace = ' . $dbr->addQuotes( $wikiPage->getNamespace() );
+					$readability[$key] = true;
+					$where[] = 'page_title = ' . $dbr->addQuotes( $wikiPage->getDBkey() ) .
+						' AND page_namespace = ' . $wikiPage->getNamespace();
 				}
 			}
 			if ( !empty( $where ) ) {
 				$res = $dbr->select( 'page', '*', implode( ' OR ', $where ), 'SMW::canReadWikiPages' );
 				foreach ( $res as $row ) {
+					$key = $row->page_namespace . ':' . $row->page_title;
 					$title = Title::newFromRow( $row );
-					if ( !$title || !$title->userCanRead() ) {
-						$key = $row->page_namespace . '_' . $row->page_title;
+					$readability[$key] = $r = $title->userCanRead();
+					if ( !$r ) {
 						unset( $diWikiPageList[$map[$key]] );
-						$result = false;
 					}
 				}
 			}
 		}
-		return $result;
+		return $readability;
 	}
 
 }
