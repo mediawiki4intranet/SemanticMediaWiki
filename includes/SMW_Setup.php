@@ -109,6 +109,8 @@ function smwfRegisterHooks() {
 	$wgHooks['SkinGetPoweredBy'][] = 'SMWHooks::addPoweredBySMW';
 	
 	$wgHooks['ExtensionTypes'][] = 'SMWHooks::addSemanticExtensionType';
+
+	$wgHooks['ParserOutputRenderKey'][] = 'SMWHooks::ParserOutputRenderKey';
 }
 
 /**

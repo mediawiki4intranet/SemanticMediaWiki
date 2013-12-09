@@ -327,4 +327,37 @@ final class SMWHooks {
 
 		return true;
 	}
+
+	/**
+	 * Hook: ParserOutputRenderKey
+	 * Modifies article cache key based on listed pages' permissions
+	 */
+	public static function ParserOutputRenderKey( $article, &$renderkey ) {
+		$cache = wfGetCache( CACHE_ANYTHING );
+		$key = wfMemcKey( 'smw-perms', $article->getId() );
+		$deps = $cache->get( $key );
+		if ( $deps ) {
+			$readAll = true;
+			$readKey = '';
+			$byte = 0;
+			$n = 0;
+			foreach ( $deps as $page => $none ) {
+				$page = explode( ':', $page, 2 );
+				$canRead = Title::makeTitle( $page[0], $page[1] )->userCanRead();
+				$readAll = $readAll && $canRead;
+				// Pack readable bits into a string
+				$byte = ( $byte << 1 ) | ( $canRead ? 1 : 0 );
+				if ( $n++ >= 6 ) {
+					$readKey .= chr( $byte+0x40 );
+					$n = $byte = 0;
+				}
+			}
+			if ( $n ) {
+				$readKey .= chr( $byte+0x40 );
+			}
+			$renderkey .= $readAll ? '1' : $readKey;
+		}
+		return true;
+	}
+
 }
