@@ -95,6 +95,7 @@ class SMWPropertyPage extends SMWOrderedListPage {
 		}
 
 		$result = '';
+		SMWPrivilegesChecker::canReadWikiPages( $diWikiPages );
 
 		if ( count( $diWikiPages ) > 0 ) {
 			$pageLister = new SMWPageLister( $diWikiPages, null, $this->limit, $this->from, $this->until );

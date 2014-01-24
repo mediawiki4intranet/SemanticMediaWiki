@@ -29,6 +29,7 @@ class SMWAsk {
 	public static function render( Parser &$parser ) {
 		global $smwgQEnabled, $smwgIQRunningNumber, $wgTitle;
 
+		$rawResult = NULL;
 		if ( $smwgQEnabled ) {
 			$smwgIQRunningNumber++;
 
@@ -37,7 +38,7 @@ class SMWAsk {
 
 			list( $query, $params ) = SMWQueryProcessor::getQueryAndParamsFromFunctionParams( $rawParams, SMW_OUTPUT_WIKI, SMWQueryProcessor::INLINE_QUERY, false );
 
-			$result = SMWQueryProcessor::getResultFromQuery( $query, $params, SMW_OUTPUT_WIKI, SMWQueryProcessor::INLINE_QUERY );
+			$result = SMWQueryProcessor::getResultFromQuery( $query, $params, SMW_OUTPUT_WIKI, SMWQueryProcessor::INLINE_QUERY, $rawResult );
 
 			$queryKey = hash( 'md4', implode( '|', $rawParams ) , false );
 			self::addQueryData( $queryKey, $query, $params, $parser );
@@ -49,7 +50,12 @@ class SMWAsk {
 			global $wgOut;
 			SMWOutputs::commitToOutputPage( $wgOut );
 		} else {
-			$parser->mOutput->mSMWAskCacheValidator = new SMWAskCacheValidator( $parser->mOutput, time() );
+			if ( !isset( $parser->mOutput->mSMWAskCacheValidator ) ) {
+				$parser->mOutput->mSMWAskCacheValidator = new SMWAskCacheValidator( $parser->mOutput, time() );
+			}
+			if ( is_object( $rawResult ) && $rawResult->mResultReadability ) {
+				$parser->mOutput->mSMWPermValidators[] = new SMWPermValidator( $parser->mTitle->getArticleId(), $parser->mOutput, $rawResult->mResultReadability );
+			}
 			SMWOutputs::commitToParser( $parser );
 		}
 
