@@ -53,7 +53,7 @@ class SMWAsk {
 			if ( !isset( $parser->mOutput->mSMWAskCacheValidator ) ) {
 				$parser->mOutput->mSMWAskCacheValidator = new SMWAskCacheValidator( $parser->mOutput, time() );
 			}
-			if ( $rawResult ) {
+			if ( is_object( $rawResult ) && $rawResult->mResultReadability ) {
 				$parser->mOutput->mSMWPermValidators[] = new SMWPermValidator( $parser->mTitle->getArticleId(), $parser->mOutput, $rawResult->mResultReadability );
 			}
 			SMWOutputs::commitToParser( $parser );
