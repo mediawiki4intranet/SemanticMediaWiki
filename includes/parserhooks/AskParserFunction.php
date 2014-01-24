@@ -123,21 +123,26 @@ class AskParserFunction {
 
 		// Remove parser object from parameters array
 		if( isset( $rawParams[0] ) && $rawParams[0] instanceof Parser ) {
-			array_shift( $rawParams );
+			$parser = array_shift( $rawParams );
 		}
 
 		$this->applicationFactory = ApplicationFactory::getInstance();
 
+		$rawResult = NULL;
 		$result = $this->doFetchResultsForRawParameters(
-			$rawParams
+			$rawParams, $rawResult
 		);
 
 		$this->parserData->pushSemanticDataToParserOutput();
+		if ( is_object( $rawResult ) && $rawResult->mResultReadability ) {
+			$out = $this->parserData->getOutput();
+			$out->mSMWPermValidators[] = new \SMW\PermValidator( $parser->getTitle()->getArticleId(), $out, $rawResult->mResultReadability );
+		}
 
 		return $result;
 	}
 
-	private function doFetchResultsForRawParameters( array $rawParams ) {
+	private function doFetchResultsForRawParameters( array $rawParams, &$rawResult ) {
 
 		// FIXME QueryDuration should be a property of the QueryProcessor or
 		// QueryEngine but since we don't want to open the pandora's box and
@@ -168,11 +173,13 @@ class AskParserFunction {
 			return '';
 		}
 
+		$rawResult = NULL;
 		$result = SMWQueryProcessor::getResultFromQuery(
 			$this->query,
 			$this->params,
 			SMW_OUTPUT_WIKI,
-			SMWQueryProcessor::INLINE_QUERY
+			SMWQueryProcessor::INLINE_QUERY,
+			$rawResult
 		);
 
 		$format = $this->params['format']->getValue();

@@ -75,11 +75,13 @@ class SMWQueryResult {
 	 */
 	public function __construct( array $printRequests, SMWQuery $query, array $results, SMWStore $store, $furtherRes = false ) {
 		$this->mResults = $results;
-		reset( $this->mResults );
 		$this->mPrintRequests = $printRequests;
 		$this->mFurtherResults = $furtherRes;
 		$this->mQuery = $query;
 		$this->mStore = $store;
+		// Filter $this->mResults
+		$this->mResultReadability = \SMW\PrivilegesChecker::canReadWikiPages( $this->mResults );
+		reset( $this->mResults );
 	}
 
 	/**

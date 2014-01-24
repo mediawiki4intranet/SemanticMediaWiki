@@ -280,6 +280,7 @@ final class Setup {
 		// Old-style registration
 		$this->globalVars['wgHooks']['AdminLinks'][] = 'SMWHooks::addToAdminLinks';
 		$this->globalVars['wgHooks']['PageSchemasRegisterHandlers'][] = 'SMWHooks::onPageSchemasRegistration';
+		$this->globalVars['wgHooks']['ParserOutputRenderKey'][] = 'SMWHooks::ParserOutputRenderKey';
 	}
 
 }

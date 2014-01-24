@@ -505,7 +505,7 @@ class SMWQueryProcessor {
 	 *
 	 * @return string
 	 */
-	public static function getResultFromQuery( SMWQuery $query, array $params, $outputMode, $context ) {
+	public static function getResultFromQuery( SMWQuery $query, array $params, $outputMode, $context, &$res = NULL ) {
 
 		$res = self::getStoreFromParams( $params )->getQueryResult( $query );
 

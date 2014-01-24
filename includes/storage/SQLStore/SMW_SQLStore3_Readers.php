@@ -292,6 +292,13 @@ class SMWSQLStore3Readers {
 		}
 
 		$result = array();
+		if ( !\SMW\PrivilegesChecker::canReadWikiPage( $object ) ) {
+			global $smwgPageSpecialProperties;
+			if ( !$propTable->isFixedPropertyTable() || !in_array( $propTable->getFixedProperty(), $smwgPageSpecialProperties ) ) {
+				return $result;
+			}
+		}
+
 		$db = $this->store->getConnection();
 
 		$diHandler = $this->store->getDataItemHandlerForDIType( $propTable->getDiType() );
@@ -425,6 +432,7 @@ class SMWSQLStore3Readers {
 		if ( $property->isInverse() ) { // inverses are working differently
 			$noninverse = new SMWDIProperty( $property->getKey(), false );
 			$result = $this->getPropertyValues( $value, $noninverse, $requestOptions );
+			\SMW\PrivilegesChecker::canReadWikiPages( $result );
 			return $result;
 		}
 
@@ -480,6 +488,7 @@ class SMWSQLStore3Readers {
 		}
 
 		$db->freeResult( $res );
+		\SMW\PrivilegesChecker::canReadWikiPages( $result );
 
 		return $result;
 	}
@@ -655,6 +664,10 @@ class SMWSQLStore3Readers {
 
 		$db = $this->store->getConnection();
 		$result = array();
+
+		if ( !\SMW\PrivilegesChecker::canReadWikiPage( $value ) ) {
+			return $result;
+		}
 
 		// Potentially need to get more results, since options apply to union.
 		if ( $requestOptions !== null ) {
