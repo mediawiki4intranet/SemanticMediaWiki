@@ -535,13 +535,28 @@ class QueryEngine {
 		$this->errors = $this->querySegmentListBuilder->getErrors();
 
 		$newQuerySegment = $this->querySegmentList[$newQuerySegmentId]; // This is always an QuerySegment::Q_CONJUNCTION ...
+		$allComponents = $this->getAllQueryComponents($qobj); // And $qobj is always a QuerySegment::Q_TABLE ...
 
 		foreach ( $newQuerySegment->components as $cid => $field ) { // ... so just re-wire its dependencies
-			$qobj->components[$cid] = $qobj->joinfield;
+			if ( !isset( $allComponents[$cid] ) ) {
+				// Same segment may be already added to the resulting query as a result of subquery optimization
+				$qobj->components[$cid] = $qobj->joinfield;
+			}
 			$qobj->sortfields = array_merge( $qobj->sortfields, $this->querySegmentList[$cid]->sortfields );
 		}
 
 		$this->querySegmentList[$qid] = $qobj;
+	}
+
+	private function getAllQueryComponents( $qobj ) {
+		$components = $qobj->components;
+		do {
+			$n = count( $components );
+			foreach ( $components as $cid => $field ) {
+				$components += $this->querySegmentList[$cid]->components;
+			}
+		} while ( count( $components ) > $n );
+		return $components;
 	}
 
 	/**

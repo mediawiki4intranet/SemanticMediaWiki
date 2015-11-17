@@ -6,6 +6,7 @@ use SMW\MediaWiki\Database;
 use SMW\SQLStore\TemporaryIdTableCreator;
 use SMWQuery as Query;
 use RuntimeException;
+use SMWSql3SmwIds;
 
 /**
  * @license GNU GPL v2+
@@ -70,6 +71,7 @@ class QuerySegmentListProcessor {
 		$this->connection = $connection;
 		$this->tempIdTableCreator = $temporaryIdTableCreator;
 		$this->hierarchyTempTableBuilder = $hierarchyTempTableBuilder;
+		$this->queryOptimizer = new \SMW\Query\Optimizer();
 	}
 
 	/**
@@ -131,13 +133,16 @@ class QuerySegmentListProcessor {
 					$this->doResolveBySegment( $subQuery );
 
 					if ( $subQuery->joinTable !== '' ) { // Join with jointable.joinfield
-						$joinType = isset( $subQuery->jointype ) ? $subQuery->jointype : 'INNER';
-						$query->from .= " $joinType JOIN " . $db->tableName( $subQuery->joinTable ) . " AS $subQuery->alias ON $joinField=" . $subQuery->joinfield;
+						$joinType = $subQuery->jointype ? $subQuery->jointype : 'INNER';
+						$query->from .= " $joinType JOIN (" . $db->tableName( $subQuery->joinTable ) . " AS $subQuery->alias $subQuery->from) ON $joinField=" . $subQuery->joinfield;
+						if ( $joinType === 'LEFT' ) {
+							$query->where .= ( ( $query->where === '' ) ? '' : ' AND ' ) . '(' . $subQuery->joinfield . ' IS NULL)';
+						}
 					} elseif ( $subQuery->joinfield !== '' ) { // Require joinfield as "value" via WHERE.
 						$condition = '';
 
 						foreach ( $subQuery->joinfield as $value ) {
-							$condition .= ( $condition ? ' OR ':'' ) . "$joinField=" . $db->addQuotes( $value );
+							$condition .= ( $condition ? ' OR ' : '' ) . "$joinField=" . $db->addQuotes( $value );
 						}
 
 						if ( count( $subQuery->joinfield ) > 1 ) {
@@ -145,6 +150,7 @@ class QuerySegmentListProcessor {
 						}
 
 						$query->where .= ( ( $query->where === '' ) ? '':' AND ' ) . $condition;
+						$query->from .= $subQuery->from;
 					} else { // interpret empty joinfields as impossible condition (empty result)
 						$query->joinfield = ''; // make whole query false
 						$query->joinTable = '';
@@ -154,10 +160,12 @@ class QuerySegmentListProcessor {
 					}
 
 					if ( $subQuery->where !== '' ) {
-						$query->where .= ( ( $query->where === '' ) ? '':' AND ' ) . '(' . $subQuery->where . ')';
+						if ( $subQuery->jointype === 'LEFT' ) {
+							$query->from .= ' AND (' . $subQuery->where . ')';
+						} else {
+							$query->where .= ( ( $query->where === '' ) ? '' : ' AND ' ) . '(' . $subQuery->where . ')';
+						}
 					}
-
-					$query->from .= $subQuery->from;
 				}
 
 				$query->components = array();
@@ -167,25 +175,38 @@ class QuerySegmentListProcessor {
 				$key = false;
 
 				// Pick one subquery as anchor point ...
-				foreach ( $query->components as $qkey => $qid ) {
+				$ok = false;
+				$components = $query->components;
+				foreach ( $components as $qkey => $qid ) {
 					$key = $qkey;
-					break;
+					$result = $this->querySegmentList[$key];
+					if ( $result->type == QuerySegment::Q_CONJUNCTION ||
+						$result->type == QuerySegment::Q_TABLE && $result->jointype !== 'LEFT' ) {
+						$ok = true;
+						break;
+					}
 				}
 
-				$result = $this->querySegmentList[$key];
-				unset( $query->components[$key] );
-
-				// Execute it first (may change jointable and joinfield, e.g. when making temporary tables)
-				$this->doResolveBySegment( $result );
+				if ( $ok ) {
+					// Execute it first (may change jointable and joinfield, e.g. when making temporary tables)
+					$this->doResolveBySegment( $result );
+					unset( $components[$key] );
+					// Copy it to our query (we don't want to damage the cached subquery)
+					$this->queryOptimizer->setQuery( $query, $result );
+				} else {
+					// Create a simple anchor query
+					$query->type = QuerySegment::Q_TABLE;
+					$query->joinTable = $db->tableName( SMWSql3SmwIds::TABLE_NAME );
+					$query->joinfield = $query->alias.'.smw_id';
+				}
 
 				// ... and append to this query the remaining queries.
-				foreach ( $query->components as $qid => $joinfield ) {
-					$result->components[$qid] = $result->joinfield;
+				foreach ( $components as $qid => $joinfield ) {
+					$query->components[$qid] = $query->joinfield;
 				}
 
 				// Second execute, now incorporating remaining conditions.
-				$this->doResolveBySegment( $result );
-				$query = $result;
+				$this->doResolveBySegment( $query );
 			break;
 			case QuerySegment::Q_DISJUNCTION:
 				if ( $this->queryMode !== Query::MODE_NONE ) {
@@ -199,20 +220,28 @@ class QuerySegmentListProcessor {
 
 				foreach ( $query->components as $qid => $joinField ) {
 					$subQuery = $this->querySegmentList[$qid];
-					$this->doResolveBySegment( $subQuery );
+
+					if ( empty( $subQuery->descriptionHash ) ) {
+						die( 'BUG: descriptionHash of subquery is empty' );
+					}
+					$cachedQueryId = $this->queryOptimizer->getTemporaryTableQuery( $subQuery->descriptionHash );
+					if ( $cachedQueryId ) {
+						$this->queryOptimizer->setQuery( $subQuery, $this->querySegmentList[$cachedQueryId] );
+					} else {
+						$this->doResolveBySegment( $subQuery );
+						$this->queryOptimizer->addTemporaryTableQuery( $subQuery->queryNumber, $subQuery->descriptionHash );
+					}
 					$sql = '';
 
 					if ( $subQuery->joinTable !== '' ) {
-						if ( isset( $subQuery->jointype ) && $subQuery->type == QuerySegment::Q_NEGATION ) {
-							// SMWNegation
-							reset( $subQuery->components );
-							list( $key, $tmp ) = each( $subquery->components );
-							$sub = $this->querySegmentList[$key];
-							$sql = 'INSERT ' . 'IGNORE ' . 'INTO ' .
-								   $db->tableName( $query->alias ) .
-								   " SELECT DISTINCT $sub->joinfield FROM " . $db->tableName( $sub->joinTable ) .
-								   " AS $sub->alias $subQuery->jointype JOIN " . $db->tableName( $subQuery->joinTable ) .
-								   " AS $subQuery->alias ON " . $subQuery->joinfield . "=" . $sub->joinfield . ( $subQuery->where ? " WHERE $subQuery->where":'' );
+						if ( $subQuery->jointype === 'LEFT' ) {
+							// Negation as an disjunction argument
+							$sub = $subQuery->anchor;
+							$sql = 'INSERT ' . 'IGNORE ' . 'INTO ' . $db->tableName( $query->alias ) .
+								   " SELECT DISTINCT $sub.smw_id FROM " . $db->tableName( SMWSql3SmwIds::TABLE_NAME ) .
+								   " AS $sub LEFT JOIN " . $db->tableName( $subQuery->joinTable ) .
+								   " AS $subQuery->alias ON $subQuery->joinfield = $sub.smw_id" .
+								   ( $subQuery->where ? " AND $subQuery->where" : '' ) . " WHERE $subQuery->joinfield IS NULL";
 						} else {
 							$sql = 'INSERT ' . 'IGNORE ' . 'INTO ' .
 								   $db->tableName( $query->alias ) .
@@ -256,55 +285,39 @@ class QuerySegmentListProcessor {
 				// TODO: currently this eliminates sortkeys, possibly keep them (needs different temp table format though, maybe not such a good thing to do)
 			break;
 			case QuerySegment::Q_NEGATION:
-				if ( $this->queryMode !== Query::MODE_NONE ) {
-					$db->query(
-						$this->getCreateTempIDTableSQL( $db->tableName( $query->alias ) ),
-						__METHOD__
-					);
+				if ( !empty( $query->anchor ) ) {
+					break;
 				}
-
-				// pick one subquery with jointable as anchor point ...
 				reset( $query->components );
 				list( $key, $tmp ) = each( $query->components );
-
 				$result = $this->querySegmentList[$key];
 				unset( $query->components[$key] );
+				if ( $query->components ) {
+					die( 'BUG: negation contains more than 1 component' );
+				}
 
 				// Execute it first (may change jointable and joinfield, e.g. when making temporary tables)
 				$this->doResolveBySegment( $result );
 
-				if ( $result->joinTable !== '' ) {
-					$sql = 'INSERT ' . 'IGNORE ' . 'INTO ' .
-						   $db->tableName( $query->alias ) .
-						   " SELECT $result->joinfield FROM " . $db->tableName( $result->joinTable ) .
-						   " AS $result->alias $result->from" . ( $result->where ? " WHERE $result->where":'' )
-					;
-				} elseif ( $result->joinfield !== '' ) {
+				if ( $result->joinTable === '' && $result->joinfield !== '' ) {
 					// NOTE: this works only for single "unconditional" values without further
 					// WHERE or FROM. The execution must take care of not creating any others.
 					$values = '';
-
 					foreach ( $result->joinfield as $value ) {
 						$values .= ( $values ? ',' : '' ) . '(' . $db->addQuotes( $value ) . ')';
 					}
-
 					$sql = 'INSERT ' . 'IGNORE ' . 'INTO ' . $db->tableName( $query->alias ) . " (id) VALUES $values";
+				} else {
+					// $result is now a Q_TABLE (and it couldn't be another negation!)
+					$this->queryOptimizer->setQuery( $query, $result );
 				}
-				if ( $sql ) {
-					$this->executedQueries[$query->alias][] = $sql;
 
-					if ( $this->queryMode !== Query::MODE_NONE ) {
-						$db->query(
-							$sql,
-							__METHOD__
-						);
-					}
-				}
+				// Free alias for the anchor table (used only in bad case when negation is part of a disjunction)
+				$query->anchor = $result->alias;
+				$query->type = QuerySegment::Q_TABLE;
 				$query->jointype = 'LEFT';
-				$query->joinTable = $query->alias;
-				$query->joinfield = "$query->alias.id";
-				$query->where = "$query->alias.id IS NULL";
 				$query->sortfields = array(); // Make sure we got no sortfields.
+				// FIXME: Remove sort joins from $query->from
 			break;
 			case QuerySegment::Q_PROP_HIERARCHY:
 			case QuerySegment::Q_CLASS_HIERARCHY: // make a saturated hierarchy

@@ -74,6 +74,13 @@ class Negation extends Description {
 	}
 
 	public function getSize() {
+		if ( $this->m_negated ) {
+			// Equal negation queries are cached because they're executed using temporary tables
+			if ( isset( Description::$optimizedSizes[$this->getQueryString()] ) ) {
+				return 0;
+			}
+			Description::$optimizedSizes[$this->getQueryString()] = true;
+		}
 		return $this->m_description->getSize();
 	}
 

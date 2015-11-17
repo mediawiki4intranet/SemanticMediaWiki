@@ -117,10 +117,21 @@ class Disjunction extends Description {
 	}
 
 	public function getSize() {
+		// Equal disjunction queries are cached because they're executed using temporary tables
+		if ( isset( Description::$optimizedSizes[$this->getQueryString()] ) ) {
+			return 0;
+		}
+		Description::$optimizedSizes[$this->getQueryString()] = true;
+
 		$size = 0;
 
+		$seen = array();
 		foreach ( $this->descriptions as $desc ) {
-			$size += $desc->getSize();
+			// Eliminate the cost of identical descriptions
+			if ( !isset( $seen[$desc->getQueryString()] ) ) {
+				$seen[$desc->getQueryString()] = true;
+				$size += $desc->getSize();
+			}
 		}
 
 		return $size;
