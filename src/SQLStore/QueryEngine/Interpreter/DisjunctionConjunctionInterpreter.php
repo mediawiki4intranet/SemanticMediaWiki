@@ -54,12 +54,15 @@ class DisjunctionConjunctionInterpreter implements DescriptionInterpreter {
 		$query = new QuerySegment();
 		$query->type = $description instanceof Conjunction ? QuerySegment::Q_CONJUNCTION : QuerySegment::Q_DISJUNCTION;
 
+		$seen = array();
 		foreach ( $description->getDescriptions() as $subDescription ) {
-
-			$subQueryId = $this->querySegmentListBuilder->buildQuerySegmentFor( $subDescription );
-
-			if ( $subQueryId >= 0 ) {
-				$query->components[$subQueryId] = true;
+			// Eliminate identical descriptions
+			if ( !isset( $seen[ $subDescription->getQueryString() ] ) ) {
+				$seen[ $subDescription->getQueryString() ] = true;
+				$subQueryId = $this->querySegmentListBuilder->buildQuerySegmentFor( $subDescription );
+				if ( $subQueryId >= 0 ) {
+					$query->components[$subQueryId] = true;
+				}
 			}
 		}
 

@@ -130,6 +130,12 @@ class QuerySegment {
 	public static $qnum = 0;
 
 	/**
+	 * Used by query optimizer to prune identical parts of queries
+	 * @var string
+	 */
+	public $descriptionHash = null;
+
+	/**
 	 * @since 2.2
 	 */
 	public function __construct() {

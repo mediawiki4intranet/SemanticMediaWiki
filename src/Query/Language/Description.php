@@ -14,6 +14,8 @@ use SMW\Query\PrintRequest as PrintRequest;
  */
 abstract class Description {
 
+	static $optimizedSizes = array();
+
 	/**
 	 * @var \SMW\Query\PrintRequest[]
 	 */

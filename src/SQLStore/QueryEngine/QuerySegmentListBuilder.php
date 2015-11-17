@@ -16,6 +16,7 @@ use SMW\SQLStore\QueryEngine\Interpreter\ValueDescriptionInterpreter;
 use SMW\SQLStore\QueryEngine\Interpreter\DispatchingDescriptionInterpreter;
 use SMW\Store;
 use SMW\CircularReferenceGuard;
+use SMW\Query\Optimizer;
 
 /**
  * @license GNU GPL v2+
@@ -64,6 +65,12 @@ class QuerySegmentListBuilder {
 	private $dispatchingDescriptionInterpreter = null;
 
 	/**
+	 * Query optimizer
+	 * @var SMW\Query\Optimizer
+	 */
+	protected $queryOptimizer;
+
+	/**
 	 * @since 2.2
 	 *
 	 * @param Store $store
@@ -86,6 +93,8 @@ class QuerySegmentListBuilder {
 
 		$this->circularReferenceGuard = new CircularReferenceGuard( 'sql-query' );
 		$this->circularReferenceGuard->setMaxRecursionDepth( 2 );
+
+		$this->queryOptimizer = new Optimizer();
 	}
 
 	/**
@@ -206,9 +215,18 @@ class QuerySegmentListBuilder {
 	 */
 	public function buildQuerySegmentFor( Description $description ) {
 
+		$cachedQuery = $this->queryOptimizer->getTemporaryTableQuery( $description->getQueryString() );
+		if ( $cachedQuery !== null ) {
+			return $cachedQuery;
+		}
+
 		$query = $this->dispatchingDescriptionInterpreter->interpretDescription( $description );
 
 		$this->registerQuerySegment( $query );
+		if ( $query->type !== QuerySegment::Q_NOQUERY ) {
+			$query->descriptionHash = $description->getQueryString();
+			$this->queryOptimizer->addTemporaryTableQuery( $query->queryNumber, $description->getQueryString() );
+		}
 
 		$this->lastQuerySegmentId = $query->type === QuerySegment::Q_NOQUERY ? -1 : $query->queryNumber;
 
