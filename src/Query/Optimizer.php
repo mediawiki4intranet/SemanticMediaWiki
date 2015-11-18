@@ -6,6 +6,7 @@ use SMW\SQLStore\QueryEngine\QuerySegment;
 
 class Optimizer {
 	protected $cacheTemporaryTables = array();
+	protected $cacheTemporaryTablesSubqueries = array();
 
 	protected $sizeReduce = 0;
 	protected $depth = 0;
@@ -35,6 +36,40 @@ class Optimizer {
 		}
 		if ( isset( $this->cacheTemporaryTables[$descriptionHash] ) ) {
 			return $this->cacheTemporaryTables[$descriptionHash];
+		}
+		return null;
+	}
+
+	/**
+	 * Add temporary table for subquery with $queryNumber and $descriptionHash for parent query with $parentQueryNumber
+	 * @param int $parentQueryNumber
+	 * @param int $queryNumber
+	 * @param string $descriptionHash
+	 */
+	public function addTemporaryTableSubquery( $parentQueryNumber, $queryNumber, $descriptionHash ) {
+		if ( $descriptionHash ) {
+			return;
+		}
+		if ( !isset( $this->cacheTemporaryTablesSubqueries[$parentQueryNumber] ) ) {
+			$this->cacheTemporaryTablesSubqueries[$parentQueryNumber] = array();
+		}
+		if ( !isset( $this->cacheTemporaryTablesSubqueries[$parentQueryNumber][$descriptionHash] ) ) {
+			$this->cacheTemporaryTablesSubqueries[$parentQueryNumber][$descriptionHash] = $queryNumber;
+		}
+	}
+
+	/**
+	 * Add temporary table for subquery with $descriptionHash for parent query with $parentQueryNumber
+	 * @param int $parentQueryNumber
+	 * @param string $descriptionHash
+	 */
+	public function getTemporaryTableSubquery( $parentQueryNumber, $descriptionHash ) {
+		if ( !$descriptionHash ) {
+			return null;
+		}
+		if ( isset( $this->cacheTemporaryTablesSubqueries[$parentQueryNumber] ) &&
+				isset( $this->cacheTemporaryTablesSubqueries[$parentQueryNumber][$descriptionHash] ) ) {
+			return $this->cacheTemporaryTablesSubqueries[$parentQueryNumber][$descriptionHash];
 		}
 		return null;
 	}

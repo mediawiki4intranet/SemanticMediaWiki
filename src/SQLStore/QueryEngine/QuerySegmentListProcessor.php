@@ -224,12 +224,12 @@ class QuerySegmentListProcessor {
 					if ( empty( $subQuery->descriptionHash ) ) {
 						die( 'BUG: descriptionHash of subquery is empty' );
 					}
-					$cachedQueryId = $this->queryOptimizer->getTemporaryTableQuery( $subQuery->descriptionHash );
+					$cachedQueryId = $this->queryOptimizer->getTemporaryTableSubquery( $query->queryNumber, $subQuery->descriptionHash );
 					if ( $cachedQueryId ) {
 						$this->queryOptimizer->setQuery( $subQuery, $this->querySegmentList[$cachedQueryId] );
 					} else {
 						$this->doResolveBySegment( $subQuery );
-						$this->queryOptimizer->addTemporaryTableQuery( $subQuery->queryNumber, $subQuery->descriptionHash );
+						$this->queryOptimizer->addTemporaryTableSubquery( $query->queryNumber, $subQuery->queryNumber, $subQuery->descriptionHash );
 					}
 					$sql = '';
 
