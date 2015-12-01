@@ -378,6 +378,16 @@ class SMWQueryProcessor {
 				$printmode = PrintRequest::PRINT_CCAT;
 				$data = $title;
 				$label = $showMode ? '' : $title->getText();  // default
+			} elseif ( strpos( $printRequestLabel, '.' ) ) {
+				$printmode = PrintRequest::PRINT_CHAIN;
+				$data = array();
+				foreach ( explode( '.', $printRequestLabel ) as $label ) {
+					$prop = $data[] = SMWPropertyValue::makeUserProperty( $label );
+					if ( !$prop->isValid() ) {
+						return null;
+					}
+				}
+				$label = '';  // default
 			} else { // enforce interpretation as property (even if it starts with something that looks like another namespace)
 				$printmode = PrintRequest::PRINT_PROP;
 				$data = SMWPropertyValue::makeUserProperty( $printRequestLabel );

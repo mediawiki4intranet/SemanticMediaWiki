@@ -24,6 +24,8 @@ class PrintRequest {
 	const PRINT_THIS = 2;
 	/// Query mode to print whether current element is in given category (Boolean printout).
 	const PRINT_CCAT = 3;
+	/// Query mode to print property value chain.
+	const PRINT_CHAIN = 4;
 
 	protected $m_mode; // type of print request
 
@@ -53,6 +55,8 @@ class PrintRequest {
 				!is_null( $data ) ) ||
 			( $mode == self::PRINT_PROP &&
 				( !( $data instanceof SMWPropertyValue ) || !$data->isValid() ) ) ||
+			( $mode == self::PRINT_CHAIN &&
+				( !is_array( $data ) || array_filter( $data, function($data) { return !( $data instanceof SMWPropertyValue ) || !$data->isValid(); } ) ) ) ||
 			( $mode == self::PRINT_CCAT &&
 				!( $data instanceof Title ) )
 		) {
@@ -99,6 +103,18 @@ class PrintRequest {
 				return $linker->makeLinkObj( $this->m_data, htmlspecialchars( $this->m_label ) );
 			case self::PRINT_PROP:
 				return $this->m_data->getShortHTMLText( $linker );
+			case self::PRINT_CHAIN:
+				if ( $this->m_label ) {
+					return htmlspecialchars( $this->m_label );
+				}
+				$html = '';
+				foreach ( $this->m_data as $prop ) {
+					if ( $html ) {
+						$html .= '.';
+					}
+					$html .= $prop->getShortHTMLText( $linker );
+				}
+				return $html;
 			case self::PRINT_THIS:
 			default:
 				return htmlspecialchars( $this->m_label );
@@ -118,6 +134,18 @@ class PrintRequest {
 					return $this->m_label; // TODO: link to Special:Categories
 				case self::PRINT_PROP:
 					return $this->m_data->getShortWikiText( $linked );
+				case self::PRINT_CHAIN:
+					if ( $this->m_label ) {
+						return $this->m_label;
+					}
+					$html = '';
+					foreach ( $this->m_data as $prop ) {
+						if ( $html ) {
+							$html .= '.';
+						}
+						$html .= $prop->getShortWikiText( $linked );
+					}
+					return $html;
 				case self::PRINT_CCAT:
 					return '[[:' . $this->m_data->getPrefixedText() . '|' . $this->m_label . ']]';
 				case self::PRINT_THIS:
@@ -165,6 +193,9 @@ class PrintRequest {
 			if ( $this->m_mode == self::PRINT_PROP ) {
 				$this->m_typeid = $this->m_data->getDataItem()->findPropertyTypeID();
 			}
+			elseif ( $this->m_mode == self::PRINT_CHAIN ) {
+				$this->m_typeid = end( $this->m_data )->getDataItem()->findPropertyTypeID();
+			}
 			else {
 				$this->m_typeid = '_wpg';
 			}
@@ -190,6 +221,11 @@ class PrintRequest {
 			}
 			elseif ( $this->m_data instanceof SMWDataValue ) {
 				$this->m_hash .= $this->m_data->getHash() . ':';
+			}
+			elseif ( is_array( $this->m_data ) ) {
+				foreach ( $this->m_data as $prop ) {
+					$this->m_hash .= $prop->getHash() . ':';
+				}
 			}
 
 			$this->m_hash .= $this->m_outputformat . ':' . implode( '|', $this->m_params );
@@ -224,6 +260,7 @@ class PrintRequest {
 
 				return $result . $parameters;
 			case self::PRINT_PROP:
+			case self::PRINT_CHAIN:
 			case self::PRINT_CCAT:
 				if ( $this->m_mode == self::PRINT_CCAT ) {
 					$printname = $this->m_data->getPrefixedText();
@@ -234,7 +271,11 @@ class PrintRequest {
 					}
 				}
 				else {
-					$printname = $this->m_data->getWikiValue();
+					$chain = is_array( $this->m_data ) ? $this->m_data : array( $this->m_data );
+					$printname = '';
+					foreach ( $chain as $prop ) {
+						$printname .= ( $printname ? '.' : '' ) . $prop->getWikiValue();
+					}
 					$result = '?' . $printname;
 
 					if ( $this->m_outputformat !== '' ) {
@@ -306,6 +347,8 @@ class PrintRequest {
 
 		if ( $this->m_data instanceof SMWDataValue ) {
 			$this->m_data->setCaption( $label );
+		} elseif ( is_array( $this->m_data ) && end( $this->m_data ) instanceof SMWDataValue ) {
+			end( $this->m_data )->setCaption( $label );
 		}
 	}
 

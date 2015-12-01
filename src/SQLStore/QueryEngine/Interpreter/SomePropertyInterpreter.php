@@ -132,7 +132,7 @@ class SomePropertyInterpreter implements DescriptionInterpreter {
 
 		// TODO: strictly speaking, the DB key is not what we want here,
 		// since sortkey is based on a "wiki value"
-		$sortkey = $property->getKey();
+		$sortkey = ( !empty( $description->_sortprefix ) ? implode( '.', $description->_sortprefix ) . '.' : '' ) . $property->getKey();
 
 		// *** Now construct the query ... ***//
 		$query->joinTable = $proptable->getName();
@@ -167,9 +167,14 @@ class SomePropertyInterpreter implements DescriptionInterpreter {
 			$query->joinfield = "{$query->alias}.{$s_id}";
 
 			// process page description like main query
-			$sub = $this->querySegmentListBuilder->buildQuerySegmentFor(
-				$description->getDescription()
-			);
+			$subdesc = $description->getDescription();
+			if ( $subdesc instanceof SomeProperty ) {
+				$subdesc->_sortprefix[] = $property->getKey();
+			}
+			$sub = $this->querySegmentListBuilder->buildQuerySegmentFor( $subdesc );
+			if ( $subdesc instanceof SomeProperty ) {
+				array_pop( $subdesc->_sortprefix );
+			}
 
 			if ( $sub >= 0 ) {
 				$query->components[$sub] = "{$query->alias}.{$o_id}";

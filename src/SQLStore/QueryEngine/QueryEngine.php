@@ -514,16 +514,38 @@ class QueryEngine {
 				if ( $propkey === '' ) { // Sort by first result column (page titles).
 					$qobj->sortfields[$propkey] = "$qobj->alias.smw_sortkey";
 				} else { // Try to extend query.
-					$sortprop = PropertyValue::makeUserProperty( $propkey );
-
-					if ( $sortprop->isValid() ) {
-						$extraProperties[] = new SomeProperty( $sortprop->getDataItem(), new ThingDescription() );
+					// process property chain syntax (e.g. "property1.property2::value"), escaped by initial " ":
+					$propertynames = ( $propkey{0} == ' ' ) ? array( $propkey ) : explode( '.', $propkey );
+					$properties = array();
+					$typeid = '_wpg';
+					foreach ( $propertynames as $name ) {
+						if ( !$this->isPagePropertyType( $typeid ) ) { // non-final property in chain was no wikipage: not allowed
+							break;
+						}
+						$property = PropertyValue::makeUserProperty( $name );
+						if ( !$property->isValid() ) {
+							break;
+						}
+						$typeid = $property->getDataItem()->findPropertyTypeID();
+						$properties[] = $property;
+					}
+					if ( $properties ) {
+						$properties = array_reverse( $properties );
+						$innerdesc = new ThingDescription();
+						foreach ( $properties as $property ) {
+							$innerdesc = new SomeProperty( $property->getDataItem(), $innerdesc );
+						}
+						$extraProperties[] = $innerdesc;
 					}
 				}
 			}
 		}
 
 		return $extraProperties;
+	}
+
+	private function isPagePropertyType( $typeid ) {
+		return $typeid == '_wpg' || $typeid == '__sob';
 	}
 
 	private function compileAccordingConditionsAndHackThemIntoQobj( array $extraProperties, $qobj, $qid ) {

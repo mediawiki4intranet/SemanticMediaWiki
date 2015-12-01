@@ -158,6 +158,9 @@ class SMWResultArray {
 			}
 		} elseif ( $this->mPrintRequest->getMode() == PrintRequest::PRINT_PROP ) {
 			$diProperty = $this->mPrintRequest->getData()->getDataItem();
+		} elseif ( $this->mPrintRequest->getMode() == PrintRequest::PRINT_CHAIN ) {
+			$diProperty = $this->mPrintRequest->getData();
+			$diProperty = end( $diProperty )->getDataItem();
 		} else {
 			$diProperty = null;
 		}
@@ -211,6 +214,26 @@ class SMWResultArray {
 				$limit = $this->mPrintRequest->getParameter( 'limit' );
 				$this->mContent = ( $limit === false ) ? ( self::$catCache ) :
 					array_slice( self::$catCache, 0, $limit );
+			break;
+			case PrintRequest::PRINT_CHAIN:
+				$chain = $this->mPrintRequest->getData();
+				$this->mContent = array( $this->mResult );
+				$opt = $this->getRequestOptions( false );
+				foreach ( $chain as $prop ) {
+					if ( $prop->isValid() ) {
+						$result = array();
+						foreach ( $this->mContent as $page ) {
+							if ( $page instanceof SMWDIWikiPage ) {
+								$result = array_merge( $result, $this->mStore->getPropertyValues(
+									$page, $prop->getDataItem(), $opt ) );
+							}
+						}
+						$this->mContent = $result;
+					} else {
+						$this->mContent = array();
+						break;
+					}
+				}
 			break;
 			case PrintRequest::PRINT_PROP:
 				$propertyValue = $this->mPrintRequest->getData();
