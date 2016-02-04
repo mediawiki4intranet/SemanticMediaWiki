@@ -57,6 +57,14 @@ class ParserData {
 		$this->parserOutput = $parserOutput;
 
 		$this->initSemanticData();
+		$this->pushSemanticDataToParserOutput();
+	}
+
+	public static function forParser( \Parser $parser ) {
+		return ApplicationFactory::getInstance()->newParserData(
+			$parser->getTitle(),
+			$parser->getOutput()
+		);
 	}
 
 	/**

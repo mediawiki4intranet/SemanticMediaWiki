@@ -52,12 +52,10 @@ class AskParserFunction {
 	/**
 	 * @since 1.9
 	 *
-	 * @param ParserData $parserData
 	 * @param MessageFormatter $messageFormatter
 	 * @param CircularReferenceGuard $circularReferenceGuard
 	 */
-	public function __construct( ParserData $parserData, MessageFormatter $messageFormatter, CircularReferenceGuard $circularReferenceGuard ) {
-		$this->parserData = $parserData;
+	public function __construct( MessageFormatter $messageFormatter, CircularReferenceGuard $circularReferenceGuard ) {
 		$this->messageFormatter = $messageFormatter;
 		$this->circularReferenceGuard = $circularReferenceGuard;
 	}
@@ -125,6 +123,7 @@ class AskParserFunction {
 		if( isset( $rawParams[0] ) && $rawParams[0] instanceof Parser ) {
 			$parser = array_shift( $rawParams );
 		}
+		$this->parserData = ParserData::forParser( $parser );
 
 		$this->applicationFactory = ApplicationFactory::getInstance();
 
@@ -135,9 +134,10 @@ class AskParserFunction {
 
 		$this->parserData->pushSemanticDataToParserOutput();
 		if ( is_object( $rawResult ) && $rawResult->mResultReadability ) {
-			$out = $this->parserData->getOutput();
+			$out = $parser->getOutput();
 			$out->mSMWPermValidators[] = new \SMW\PermValidator( $parser->getTitle()->getArticleId(), $out, $rawResult->mResultReadability );
 		}
+		$this->parserData = NULL;
 
 		return $result;
 	}

@@ -33,25 +33,17 @@ class DeclareParserFunction {
 	/**
 	 * @since 2.1
 	 *
-	 * @param ParserData $parserData
-	 */
-	public function __construct( ParserData $parserData ) {
-		$this->parserData = $parserData;
-	}
-
-	/**
-	 * @since 2.1
-	 *
 	 * @param PPFrame $frame
 	 * @param array $args
 	 */
-	public function parse( PPFrame $frame, array $args ) {
+	public function parse( Parser $parser, PPFrame $frame, array $args ) {
 
 		// @todo Save as metadata
 		if ( !$frame->isTemplate() ) {
 			return '';
 		}
 
+		$this->parserData = ParserData::forParser( $parser );
 		$this->subject = $this->parserData->getSemanticData()->getSubject();
 
 		foreach ( $args as $arg ) {
@@ -78,6 +70,7 @@ class DeclareParserFunction {
 		}
 
 		$this->parserData->pushSemanticDataToParserOutput();
+		$this->parserData = NULL;
 
 		return '';
 	}

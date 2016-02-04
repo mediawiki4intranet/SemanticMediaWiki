@@ -34,11 +34,9 @@ class ConceptParserFunction {
 	/**
 	 * @since 1.9
 	 *
-	 * @param ParserData $parserData
 	 * @param MessageFormatter $messageFormatter
 	 */
-	public function __construct( ParserData $parserData, MessageFormatter $messageFormatter ) {
-		$this->parserData = $parserData;
+	public function __construct( MessageFormatter $messageFormatter ) {
 		$this->messageFormatter = $messageFormatter;
 	}
 
@@ -53,6 +51,12 @@ class ConceptParserFunction {
 	 * @return string|null
 	 */
 	public function parse( array $rawParams ) {
+		// Remove parser object from parameters array
+		if( isset( $rawParams[0] ) && $rawParams[0] instanceof Parser ) {
+			$parser = array_shift( $rawParams );
+		}
+		$this->parserData = ParserData::forParser( $parser );
+
 		$this->parserData->getOutput()->addModules( 'ext.smw.style' );
 
 		$title = $this->parserData->getTitle();
@@ -62,11 +66,6 @@ class ConceptParserFunction {
 			return $this->messageFormatter->addFromKey( 'smw_no_concept_namespace' )->getHtml();
 		} elseif ( count( $this->parserData->getSemanticData()->getPropertyValues( $property ) ) > 0 ) {
 			return $this->messageFormatter->addFromKey( 'smw_multiple_concepts' )->getHtml();
-		}
-
-		// Remove parser object from parameters array
-		if( isset( $rawParams[0] ) && $rawParams[0] instanceof Parser ) {
-			array_shift( $rawParams );
 		}
 
 		// Use first parameter as concept (query) string
@@ -99,6 +98,8 @@ class ConceptParserFunction {
 		if ( $this->messageFormatter->exists() ) {
 			return $this->messageFormatter->getHtml();
 		}
+
+		$this->parserData = NULL;
 
 		return $this->buildConceptInfoBox( $title, $conceptQueryString, $conceptDocu );
 	}

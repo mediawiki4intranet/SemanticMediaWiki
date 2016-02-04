@@ -58,12 +58,10 @@ class SubobjectParserFunction {
 	/**
 	 * @since 1.9
 	 *
-	 * @param ParserData $parserData
 	 * @param Subobject $subobject
 	 * @param MessageFormatter $messageFormatter
 	 */
-	public function __construct( ParserData $parserData, Subobject $subobject, MessageFormatter $messageFormatter ) {
-		$this->parserData = $parserData;
+	public function __construct( Subobject $subobject, MessageFormatter $messageFormatter ) {
 		$this->subobject = $subobject;
 		$this->messageFormatter = $messageFormatter;
 		$this->dataValueFactory = DataValueFactory::getInstance();
@@ -88,7 +86,9 @@ class SubobjectParserFunction {
 	 *
 	 * @return string|null
 	 */
-	public function parse( ParserParameterProcessor $parameters ) {
+	public function parse( \Parser $parser, ParserParameterProcessor $parameters ) {
+
+		$this->parserData = ParserData::forParser( $parser );
 
 		$this->addDataValuesToSubobject( $parameters );
 
@@ -97,11 +97,15 @@ class SubobjectParserFunction {
 			$this->parserData->pushSemanticDataToParserOutput();
 		}
 
-		return $this->messageFormatter
+		$r = $this->messageFormatter
 			->addFromArray( $this->subobject->getErrors() )
 			->addFromArray( $this->parserData->getErrors() )
 			->addFromArray( $parameters->getErrors() )
 			->getHtml();
+
+		$this->parserData = NULL;
+
+		return $r;
 	}
 
 	protected function addDataValuesToSubobject( ParserParameterProcessor $parameters ) {

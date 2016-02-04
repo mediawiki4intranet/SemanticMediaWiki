@@ -23,18 +23,16 @@ class RecurringEventsParserFunction extends SubobjectParserFunction {
 	/**
 	 * @since 1.9
 	 *
-	 * @param ParserData $parserData
 	 * @param Subobject $subobject
 	 * @param MessageFormatter $messageFormatter
 	 * @param Settings $settings
 	 */
 	public function __construct(
-		ParserData $parserData,
 		Subobject $subobject,
 		MessageFormatter $messageFormatter,
 		Settings $settings
 	) {
-		parent::__construct ( $parserData, $subobject, $messageFormatter );
+		parent::__construct ( $subobject, $messageFormatter );
 		$this->settings = $settings;
 	}
 
@@ -48,7 +46,9 @@ class RecurringEventsParserFunction extends SubobjectParserFunction {
 	 *
 	 * @return string|null
 	 */
-	public function parse( ParserParameterProcessor $parameters ) {
+	public function parse( Parser $parser, ParserParameterProcessor $parameters ) {
+
+		$this->parserData = ParserData::forParser( $parser );
 
 		$this->setFirstElementForPropertyLabel( true );
 
@@ -81,6 +81,8 @@ class RecurringEventsParserFunction extends SubobjectParserFunction {
 
 		// Update ParserOutput
 		$this->parserData->pushSemanticDataToParserOutput();
+
+		$this->parserData = NULL;
 
 		return $this->messageFormatter->getHtml();
 	}

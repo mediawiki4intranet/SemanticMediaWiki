@@ -39,12 +39,10 @@ class SetParserFunction {
 	/**
 	 * @since 1.9
 	 *
-	 * @param ParserData $parserData
 	 * @param MessageFormatter $messageFormatter
 	 * @param WikitextTemplateRenderer $templateRenderer
 	 */
-	public function __construct( ParserData $parserData, MessageFormatter $messageFormatter, WikitextTemplateRenderer $templateRenderer ) {
-		$this->parserData = $parserData;
+	public function __construct( MessageFormatter $messageFormatter, WikitextTemplateRenderer $templateRenderer ) {
 		$this->messageFormatter = $messageFormatter;
 		$this->templateRenderer = $templateRenderer;
 	}
@@ -56,7 +54,9 @@ class SetParserFunction {
 	 *
 	 * @return string|null
 	 */
-	public function parse( ParserParameterProcessor $parameters ) {
+	public function parse( Parser $parser, ParserParameterProcessor $parameters ) {
+
+		$this->parserData = ParserData::forParser( $parser );
 
 		$count = 0;
 		$template = '';
@@ -104,6 +104,8 @@ class SetParserFunction {
 		$html = $this->templateRenderer->render() . $this->messageFormatter
 			->addFromArray( $parameters->getErrors() )
 			->getHtml();
+
+		$this->parserData = NULL;
 
 		return array( $html, 'noparse' => $template === '', 'isHTML' => false );
 	}
