@@ -56,6 +56,7 @@ class InfoParserFunction implements HookHandler {
 				array(
 					'name' => 'message',
 					'message' => 'smw-info-par-message',
+					'default' => '',
 				),
 				array(
 					'name' => 'icon',
