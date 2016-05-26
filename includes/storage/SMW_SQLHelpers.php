@@ -24,7 +24,7 @@ class SMWSQLHelpers {
 	 * @return string|false SQL type declaration
 	 */
 	static public function getStandardDBType( $input ) {
-		global $wgDBtype;
+		global $wgDBtype, $wgMaxTitleBytes;
 
 		switch ( $input ) {
 			case 'id':
@@ -32,7 +32,7 @@ class SMWSQLHelpers {
 			case 'namespace':
 			return $wgDBtype == 'postgres' ? 'BIGINT' : 'INT(11)'; // like page_namespace in MW page table
 			case 'title':
-			return $wgDBtype == 'postgres' ? 'TEXT' : 'VARBINARY(255)'; // like page_title in MW page table
+			return $wgDBtype == 'postgres' ? 'TEXT' : 'VARBINARY('.(isset($wgMaxTitleBytes) ? $wgMaxTitleBytes : 255).')'; // like page_title in MW page table
 			case 'iw':
 			return ($wgDBtype == 'postgres' || $wgDBtype == 'sqlite') ? 'TEXT' : 'VARBINARY(32)'; // like iw_prefix in MW interwiki table
 			case 'blob':
