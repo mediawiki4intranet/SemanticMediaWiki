@@ -563,6 +563,7 @@ class QueryEngine {
 			if ( !isset( $allComponents[$cid] ) ) {
 				// Same segment may be already added to the resulting query as a result of subquery optimization
 				$qobj->components[$cid] = $qobj->joinfield;
+				$this->querySegmentList[$cid]->jointype = 'LEFT OUTER';
 			}
 			$qobj->sortfields = array_merge( $qobj->sortfields, $this->querySegmentList[$cid]->sortfields );
 		}

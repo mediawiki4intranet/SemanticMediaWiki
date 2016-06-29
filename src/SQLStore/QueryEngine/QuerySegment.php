@@ -83,6 +83,7 @@ class QuerySegment {
 	public $joinfield = '';
 
 	/**
+	 * Join type. Either INNER (default), LEFT (not-join: a LEFT JOIN b ON a.i=b.i WHERE b.i IS NULL) or LEFT OUTER (normal left join)
 	 * @var string
 	 */
 	public $jointype = '';

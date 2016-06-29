@@ -164,7 +164,7 @@ class QuerySegmentListProcessor {
 					}
 
 					if ( $subQuery->where !== '' ) {
-						if ( $subQuery->jointype === 'LEFT' ) {
+						if ( $subQuery->jointype === 'LEFT' || $subQuery->jointype == 'LEFT OUTER' ) {
 							$query->from .= ' AND (' . $subQuery->where . ')';
 						} else {
 							$query->where .= ( ( $query->where === '' ) ? '' : ' AND ' ) . '(' . $subQuery->where . ')';
