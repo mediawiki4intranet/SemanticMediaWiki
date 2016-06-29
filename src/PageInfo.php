@@ -75,4 +75,7 @@ interface PageInfo {
 	 */
 	public function getMimeType();
 
+	public function getMajorModificationDate();
+	public function getMajorRevComment();
+	public function getComment();
 }

@@ -30,6 +30,8 @@ class PageInfoProvider implements PageInfo {
 	 */
 	private $revision = null;
 
+	private $majorRev = null;
+
 	/**
 	 * @var User
 	 */
@@ -55,6 +57,45 @@ class PageInfoProvider implements PageInfo {
 	 */
 	public function getModificationDate() {
 		return $this->wikiPage->getTimestamp();
+	}
+
+	protected function getMajorRev() {
+		if ( $this->majorRev ) {
+			return $this->majorRev;
+		}
+		$pageId = $this->wikiPage->getTitle()->getArticleID();
+		if ( $pageId ) {
+			$db = wfGetDB( DB_SLAVE ); // FIXME DB_MASTER?
+			$row = $db->selectRow( 'revision', Revision::selectFields(),
+				array( 'rev_page' => $pageId, 'rev_minor_edit' => 0 ),
+				__METHOD__,
+				array( 'ORDER BY' => 'rev_timestamp DESC', 'LIMIT' => 1 )
+			);
+			if ( $row ) {
+				return ( $this->majorRev = new Revision( $row ) );
+			}
+		}
+		return NULL;
+	}
+
+	public function getMajorModificationDate() {
+		$rev = $this->getMajorRev();
+		if ( $rev ) {
+			return $rev->getTimestamp();
+		}
+		return $this->wikiPage->getTimestamp();
+	}
+
+	public function getMajorRevComment() {
+		$rev = $this->getMajorRev();
+		if ( $rev ) {
+			return $rev->getComment();
+		}
+		return $this->wikiPage->getComment();
+	}
+
+	public function getComment() {
+		return $this->wikiPage->getComment();
 	}
 
 	/**

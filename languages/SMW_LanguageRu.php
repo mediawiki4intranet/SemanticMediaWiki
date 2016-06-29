@@ -77,7 +77,10 @@ class SMWLanguageRu extends SMWLanguage {
 		'_ASKDE'=> 'Глубина запроса',
 		'_ASKDU'=> 'Длительность запроса',
 		'_MEDIA'=> 'Тип медиа',
-		'_MIME' => 'MIME-тип'
+		'_MIME' => 'MIME-тип',
+		'_JDAT' => 'Дата крупной правки',
+		'_JCMT' => 'Комментарий к крупной правке',
+		'_MCMT' => 'Комментарий к правке',
 	);
 
 	protected $m_SpecialPropertyAliases = array(

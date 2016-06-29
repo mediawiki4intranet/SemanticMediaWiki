@@ -38,7 +38,7 @@ class PropertyTableInfoFetcher {
 	 * @var array
 	 */
 	private $customizableSpecialProperties = array(
-		'_MDAT', '_CDAT', '_NEWP', '_LEDT', '_MIME', '_MEDIA',
+		'_MDAT', '_CDAT', '_NEWP', '_LEDT', '_MIME', '_MEDIA', '_JDAT', '_JCMT', '_MCMT'
 	);
 
 	/**

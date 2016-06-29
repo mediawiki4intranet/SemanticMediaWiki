@@ -94,6 +94,9 @@ abstract class SMWLanguage {
 		'Has query duration' => '_ASKDU',
 		'Has media type'     => '_MEDIA',
 		'Has mime type'      => '_MIME',
+		'Major modification date' => '_JDAT',
+		'Major revision comment' => '_JCMT',
+		'Last revision comment' => '_MCMT',
 	);
 
 	public function __construct() {

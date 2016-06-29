@@ -105,6 +105,15 @@ class PredefinedPropertyAnnotator extends PropertyAnnotatorDecorator {
 				$dataItem = $this->pageInfo->isFilePage() && $this->pageInfo->getMimeType() !== '' && $this->pageInfo->getMimeType() !== null  ? new DIBlob( $this->pageInfo->getMimeType() ) : null;
 				// @codingStandardsIgnoreEnd
 				break;
+			case DIProperty::TYPE_MAJOR_MODIFICATION_DATE :
+				$dataItem = DITime::newFromTimestamp( $this->pageInfo->getMajorModificationDate() );
+				break;
+			case DIProperty::TYPE_MAJOR_REV_COMMENT :
+				$dataItem = new DIBlob( $this->pageInfo->getMajorRevComment() );
+				break;
+			case DIProperty::TYPE_COMMENT :
+				$dataItem = new DIBlob( $this->pageInfo->getComment() );
+				break;
 		}
 
 		return $dataItem;

@@ -308,6 +308,9 @@ class PropertyRegistry {
 			'_ERRP'  => array( '_wpp', false, false ), // "has improper value for"
 			'_LIST'  => array( '__pls', true, true ), // "has fields"
 			'_SKEY'  => array( '__key', false, true ), // sort key of a page
+			'_JDAT'  => array( '_dat', false, false ), // major modification date
+			'_JCMT'  => array( '_txt', false, false ), // major revision comment
+			'_MCMT'  => array( '_txt', false, false ), // latest revision comment
 
 			// FIXME SF related properties to be removed with 3.0
 			'_SF_DF' => array( '__spf', true, true ), // Semantic Form's default form property
