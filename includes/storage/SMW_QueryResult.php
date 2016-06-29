@@ -357,7 +357,7 @@ class SMWQueryResult {
 		return array_merge( $serializeArray, array(
 			'meta'=> array(
 				'hash'   => md5( FormatJson::encode( $serializeArray ) ),
-				'count'  => $this->getCount(),
+				'count'  => $this->mQuery->querymode == SMWQuery::MODE_COUNT ? $this->countValue : $this->getCount(),
 				'offset' => $this->mQuery->getOffset()
 				)
 			)
