@@ -274,7 +274,7 @@ class PrintRequest {
 					$chain = is_array( $this->m_data ) ? $this->m_data : array( $this->m_data );
 					$printname = '';
 					foreach ( $chain as $prop ) {
-						$printname .= ( $printname ? '.' : '' ) . $prop->getWikiValue();
+						$printname .= ( $printname ? '.' : '' ) . ( $prop->isUserDefined() ? $prop->getWikiValue() : $prop->getPropertyID() );
 					}
 					$result = '?' . $printname;
 
