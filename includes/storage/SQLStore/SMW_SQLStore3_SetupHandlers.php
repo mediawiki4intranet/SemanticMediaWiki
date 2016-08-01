@@ -65,6 +65,7 @@ class SMWSQLStore3SetupHandlers implements MessageReporter {
 		$dbtypes = array(
 			'b' => ( $wgDBtype == 'postgres' ? 'BOOLEAN' : 'TINYINT(1)' ),
 			't' => SMWSQLHelpers::getStandardDBType( 'title' ),
+			's' => ( $wgDBtype == 'postgres' ? 'TEXT' : 'VARCHAR(255)' ),
 			'l' => SMWSQLHelpers::getStandardDBType( 'blob' ),
 			'f' => ( $wgDBtype == 'postgres' ? 'DOUBLE PRECISION' : 'DOUBLE' ),
 			'i' => ( $wgDBtype == 'postgres' ? 'bigint' : 'INT(8)' ),
@@ -95,7 +96,7 @@ class SMWSQLStore3SetupHandlers implements MessageReporter {
 				'smw_title' => $dbtypes['t'] . ' NOT NULL',
 				'smw_iw' => $dbtypes['w'] . ' NOT NULL',
 				'smw_subobject' => $dbtypes['t'] . ' NOT NULL',
-				'smw_sortkey' => $dbtypes['t']  . ' NOT NULL',
+				'smw_sortkey' => $dbtypes['s']  . ' NOT NULL',
 				'smw_proptable_hash' => $dbtypes['l']
 			),
 			$db,
