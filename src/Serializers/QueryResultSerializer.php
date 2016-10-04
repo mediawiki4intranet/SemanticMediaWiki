@@ -145,7 +145,7 @@ class QueryResultSerializer implements Serializer {
 			foreach ( $queryResult->getPrintRequests() as $printRequest ) {
 				$resultArray = new SMWResultArray( $diWikiPage, $printRequest, $queryResult->getStore() );
 
-				if ( $printRequest->getMode() === PrintRequest::PRINT_THIS ) {
+				if ( $printRequest->getMode() === PrintRequest::PRINT_THIS && $printRequest->getLabel() === '' ) {
 					$dataItems = $resultArray->getContent();
 					$result += self::getSerialization( array_shift( $dataItems ), $printRequest );
 				} elseif ( $resultArray->getContent() !== array() ) {
