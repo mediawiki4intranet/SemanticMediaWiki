@@ -130,6 +130,7 @@
 				data: {
 					'action': 'ask',
 					'format': 'json',
+					'formatversion': 2,
 					'query' : queryString
 					},
 				converters: { 'text json': function ( data ) {
