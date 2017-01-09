@@ -121,7 +121,7 @@ class DeferredRequestDispatchManager {
 					$parameters
 				);
 
-				$purgeParserCacheJob->insert();
+				$purgeParserCacheJob->run();
 			};
 		}
 
