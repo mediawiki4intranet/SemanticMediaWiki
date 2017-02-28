@@ -188,17 +188,20 @@ class EmbeddedQueryDependencyListResolver {
 		}
 	}
 
-	private function doMatchSubcategory( &$subjects, DIWikiPage $category ) {
+	private function doMatchSubcategory( &$subjects, DIWikiPage $category, &$seen = array() ) {
 
 		$subcategories = $this->propertyHierarchyLookup->findSubcategoryListFor( $category );
 
 		foreach ( $subcategories as $subcategory ) {
 
-			if ( $this->propertyHierarchyLookup->hasSubcategoryFor( $subcategory ) ) {
-				$this->doMatchSubcategory( $subjects, $subcategory );
+			if (empty($seen[$subcategory->getDBkey()])) {
+				$seen[$subcategory->getDBkey()] = true;
+				if ( $this->propertyHierarchyLookup->hasSubcategoryFor( $subcategory ) ) {
+					$this->doMatchSubcategory( $subjects, $subcategory, $seen );
+				}
+				$subjects[] = $subcategory;
 			}
 
-			$subjects[] = $subcategory;
 		}
 	}
 
