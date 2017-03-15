@@ -171,7 +171,7 @@ class EmbeddedQueryDependencyLinksStore {
 	 *
 	 * @return array
 	 */
-	public function findPartialEmbeddedQueryTargetLinksHashListFor( array $idlist, $limit, $offset ) {
+	public function findPartialEmbeddedQueryTargetLinksHashListFor( array $idlist, $limit, $offset, &$count ) {
 
 		if ( $idlist === array() || !$this->isEnabled() ) {
 			return array();
@@ -200,6 +200,8 @@ class EmbeddedQueryDependencyLinksStore {
 		foreach ( $rows as $row ) {
 			$targetLinksIdList[] = $row->s_id;
 		}
+
+		$count = count( $targetLinksIdList );
 
 		if ( $targetLinksIdList === array() ) {
 			return array();

@@ -103,21 +103,20 @@ class ParserCachePurgeJob extends JobBase {
 		);
 
 		// +1 to look ahead
+		$count = 0;
 		$hashList = $embeddedQueryDependencyLinksStore->findPartialEmbeddedQueryTargetLinksHashListFor(
 			$idList,
 			$this->limit + 1,
-			$this->offset
+			$this->offset,
+			$count
 		);
-
-		if ( $hashList === array() ) {
-			return true;
-		}
-
-		$countedHashListEntries = count( $hashList );
 
 		// If more results are available then use an iterative increase to fetch
 		// the remaining updates by creating successive jobs
-		if ( $countedHashListEntries > $this->limit ) {
+		// But check it using count of rows in query_links, not using count of hashes!
+		// Sometimes query_links is corrupted and contains IDs not present in smw_object_ids anymore
+		// In this case we may lose some query_links and page updates if we check $countedHashListEntries
+		if ( $count > $this->limit ) {
 
 			$job = new self( $this->getTitle(), array(
 				'idlist' => $idList,
@@ -128,6 +127,11 @@ class ParserCachePurgeJob extends JobBase {
 			$job->run();
 		}
 
+		if ( $hashList === array() ) {
+			return true;
+		}
+
+		$countedHashListEntries = count( $hashList );
 		wfDebugLog( 'smw', __METHOD__  . " counted: {$countedHashListEntries} | offset: {$this->offset}  for " . $this->getTitle()->getPrefixedDBKey() . "\n" );
 
 		$hashList = $this->doBuildUniqueTargetLinksHashList(
