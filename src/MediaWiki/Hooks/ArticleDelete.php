@@ -27,7 +27,7 @@ class ArticleDelete {
 	 *
 	 * @param Wikipage $wikiPage
 	 */
-	public function __construct( &$wikiPage, &$user, &$reason, &$error ) {
+	public function __construct( $wikiPage, $user, $reason, $error ) {
 		$this->wikiPage = $wikiPage;
 		$this->user = $user;
 		$this->reason = $reason;

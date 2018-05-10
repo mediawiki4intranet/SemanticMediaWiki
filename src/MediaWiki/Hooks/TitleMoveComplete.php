@@ -55,7 +55,7 @@ class TitleMoveComplete {
 	 * @param $oldId database ID of the page that's been moved
 	 * @param $newId database ID of the created redirect
 	 */
-	public function __construct( &$oldTitle, &$newTitle, &$user, $oldId, $newId ) {
+	public function __construct( $oldTitle, $newTitle, $user, $oldId, $newId ) {
 		$this->oldTitle = $oldTitle;
 		$this->newTitle = $newTitle;
 		$this->user = $user;

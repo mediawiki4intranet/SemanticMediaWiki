@@ -121,7 +121,7 @@ class HookRegistry {
 		 *
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/ParserAfterTidy
 		 */
-		$this->handlers['ParserAfterTidy'] = function ( &$parser, &$text ) {
+		$this->handlers['ParserAfterTidy'] = function ( $parser, &$text ) {
 
 			$parserAfterTidy = new ParserAfterTidy(
 				$parser,
@@ -168,7 +168,7 @@ class HookRegistry {
 		 *
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/OutputPageParserOutput
 		 */
-		$this->handlers['OutputPageParserOutput'] = function ( &$outputPage, $parserOutput ) {
+		$this->handlers['OutputPageParserOutput'] = function ( $outputPage, $parserOutput ) {
 
 			$outputPageParserOutput = new OutputPageParserOutput(
 				$outputPage,
@@ -183,7 +183,7 @@ class HookRegistry {
 		 *
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/BeforePageDisplay
 		 */
-		$this->handlers['BeforePageDisplay'] = function ( &$outputPage, &$skin ) {
+		$this->handlers['BeforePageDisplay'] = function ( $outputPage, $skin ) {
 
 			$beforePageDisplay = new BeforePageDisplay(
 				$outputPage,
@@ -199,7 +199,7 @@ class HookRegistry {
 		 *
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/InternalParseBeforeLinks
 		 */
-		$this->handlers['InternalParseBeforeLinks'] = function ( &$parser, &$text ) {
+		$this->handlers['InternalParseBeforeLinks'] = function ( $parser, &$text ) {
 
 			$internalParseBeforeLinks = new InternalParseBeforeLinks(
 				$parser,
@@ -233,7 +233,7 @@ class HookRegistry {
 		 *
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/TitleMoveComplete
 		 */
-		$this->handlers['TitleMoveComplete'] = function ( &$oldTitle, &$newTitle, &$user, $oldId, $newId ) {
+		$this->handlers['TitleMoveComplete'] = function ( $oldTitle, $newTitle, $user, $oldId, $newId ) {
 
 			$titleMoveComplete = new TitleMoveComplete(
 				$oldTitle,
@@ -251,7 +251,7 @@ class HookRegistry {
 		 *
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/ArticlePurge
 		 */
-		$this->handlers['ArticlePurge']= function ( &$wikiPage ) {
+		$this->handlers['ArticlePurge']= function ( $wikiPage ) {
 
 			$articlePurge = new ArticlePurge();
 
@@ -264,7 +264,7 @@ class HookRegistry {
 		 *
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/ArticleDelete
 		 */
-		$this->handlers['ArticleDelete'] = function ( &$wikiPage, &$user, &$reason, &$error ) {
+		$this->handlers['ArticleDelete'] = function ( $wikiPage, $user, &$reason, &$error ) {
 
 			$articleDelete = new ArticleDelete(
 				$wikiPage,
@@ -360,7 +360,7 @@ class HookRegistry {
 		/**
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/SkinTemplateNavigation
 		 */
-		$this->handlers['SkinTemplateNavigation'] = function ( &$skinTemplate, &$links ) {
+		$this->handlers['SkinTemplateNavigation'] = function ( $skinTemplate, &$links ) {
 
 			$skinTemplateNavigation = new SkinTemplateNavigation(
 				$skinTemplate,
@@ -385,7 +385,7 @@ class HookRegistry {
 		/**
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/ResourceLoaderTestModules
 		 */
-		$this->handlers['ResourceLoaderTestModules'] = function ( &$testModules, &$resourceLoader ) use ( $basePath, $globalVars ) {
+		$this->handlers['ResourceLoaderTestModules'] = function ( &$testModules, $resourceLoader ) use ( $basePath, $globalVars ) {
 
 			$resourceLoaderTestModules = new ResourceLoaderTestModules(
 				$resourceLoader,
@@ -437,7 +437,7 @@ class HookRegistry {
 		/**
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/ArticleFromTitle
 		 */
-		$this->handlers['ArticleFromTitle'] = function ( &$title, &$article ) {
+		$this->handlers['ArticleFromTitle'] = function ( $title, &$article ) {
 
 			$articleFromTitle = new ArticleFromTitle(
 				$title,
@@ -553,7 +553,7 @@ class HookRegistry {
 		/**
 		 * @see https://www.mediawiki.org/wiki/Manual:Hooks/ParserFirstCallInit
 		 */
-		$this->handlers['ParserFirstCallInit'] = function ( &$parser ) use( $applicationFactory ) {
+		$this->handlers['ParserFirstCallInit'] = function ( $parser ) use( $applicationFactory ) {
 
 			$parserFunctionFactory = $applicationFactory->newParserFunctionFactory( $parser );
 
