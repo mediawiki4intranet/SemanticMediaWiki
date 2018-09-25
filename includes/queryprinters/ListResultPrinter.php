@@ -409,7 +409,7 @@ class ListResultPrinter extends ResultPrinter {
 			}
 
 			if ( $fieldName === '' || $fieldName === '?' ) {
-				$fieldName = $fieldName . $i + 1;
+				$fieldName = $fieldName . ( $i + 1 );
 			}
 
 			while ( ( $text = $field->getNextText( SMW_OUTPUT_WIKI, $this->getLinker( $i == 0 ) ) ) !== false ) {
